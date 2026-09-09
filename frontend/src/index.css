@@ -1,0 +1,75 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap');
+
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+/* ============================================================
+   VARIABLES DE MUGI — MODO CLARO
+============================================================ */
+
+:root {
+  --mugi-bg: #EFE8DF;
+  --mugi-card: #F8F3EA;
+  --mugi-text: #52070A;
+  --mugi-secondary: #0F414A;
+  --mugi-red: #7F0303;
+  --mugi-gold: #D4AF37;
+  --mugi-border: #D8BA98;
+}
+
+/* ============================================================
+   MODO OSCURO — VINO / MARRÓN CASI NEGRO
+============================================================ */
+
+html.dark {
+  --mugi-bg: #160B0C;
+  --mugi-card: #241415;
+  --mugi-text: #F8F3EA;
+  --mugi-secondary: #E3D7D2;
+  --mugi-red: #8F1D24;
+  --mugi-gold: #D4AF37;
+  --mugi-border: #6B4540;
+}
+
+/* ============================================================
+   BASE
+============================================================ */
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+
+  background-color: var(--mugi-bg);
+  color: var(--mugi-text);
+
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-contenedor {
+  min-height: 100vh;
+
+  display: flex;
+  flex-direction: column;
+
+  background-color: var(--mugi-bg);
+
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
+}
+
+.contenido-principal {
+  flex: 1;
+}
+
+::selection {
+  background-color: var(--mugi-gold);
+  color: #160B0C;
+}

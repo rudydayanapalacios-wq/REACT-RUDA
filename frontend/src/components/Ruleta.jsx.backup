@@ -1,0 +1,163 @@
+import { useState, useEffect } from "react";
+import "../styles/Ruleta.css";
+
+import texturaPergamino from "../assets/img/pergamino.png";
+
+import luffy from "../assets/img/Luffyaudifono.jpg";
+import zoro from "../assets/img/pendientesZoro.jpg";
+import nami from "../assets/img/llaveroNami.jpg";
+import sanji from "../assets/img/FundaSanji.jpg";
+import chopper from "../assets/img/AudifonChopper.jpg";
+import robin from "../assets/img/RelojRobin.jpg";
+import usopp from "../assets/img/ManillaUssop.jpg";
+import franky from "../assets/img/GafasFranky.jpg";
+import brook from "../assets/img/FundaBrook.jpg";
+import jinbe from "../assets/img/LlaverJinbe.jpg";
+
+function Ruleta() {
+  const imagenes = [
+    {
+      imagen: luffy,
+      titulo: "Audífonos de Luffy",
+      descripcion: "Accesorio temático con sonido de alta calidad inspirado en Monkey D. Luffy.",
+      precio: "65.000",
+      color: "#ff4b45",
+    },
+    {
+      imagen: zoro,
+      titulo: "Pendientes de Zoro",
+      descripcion: "Set de pendientes dorados inspirados en el espadachín Roronoa Zoro.",
+      precio: "25.000",
+      color: "#2e7d32",
+    },
+    {
+      imagen: nami,
+      titulo: "Llavero de Nami",
+      descripcion: "Llavero metálico de alta resistencia con diseño exclusivo de Nami.",
+      precio: "15.000",
+      color: "#ff9800",
+    },
+    {
+      imagen: sanji,
+      titulo: "Funda de Sanji",
+      descripcion: "Funda de protección antichoque temática del cocinero de los Sombrero de Paja.",
+      precio: "35.000",
+      color: "#2196f3",
+    },
+    {
+      imagen: chopper,
+      titulo: "Audífonos de Chopper",
+      descripcion: "Audífonos supraaurales súper cómodos inspirados en Tony Tony Chopper.",
+      precio: "58.000",
+      color: "#e91e63",
+    },
+    {
+      imagen: robin,
+      titulo: "Reloj de Robin",
+      descripcion: "Reloj elegante de pulsera con detalles únicos de Nico Robin.",
+      precio: "45.000",
+      color: "#9c27b0",
+    },
+    {
+      imagen: usopp,
+      titulo: "Manilla de Usopp",
+      descripcion: "Pulsera de cuero tejido con dijes inspirados en Usopp.",
+      precio: "20.000",
+      color: "#795548",
+    },
+    {
+      imagen: franky,
+      titulo: "Gafas de Franky",
+      descripcion: "Gafas de sol súper estilo futurista inspiradas en el cyborg Franky.",
+      precio: "40.000",
+      color: "#00bcd4",
+    },
+    {
+      imagen: brook,
+      titulo: "Funda de Brook",
+      descripcion: "Funda para teléfono con diseño del Rey del Soul, Brook.",
+      precio: "35.000",
+      color: "#607d8b",
+    },
+    {
+      imagen: jinbe,
+      titulo: "Llavero de Jinbe",
+      descripcion: "Llavero de goma de alta densidad con el timonel Jinbe.",
+      precio: "18.000",
+      color: "#009688",
+    },
+  ];
+
+  const [indice, setIndice] = useState(0);
+  const [estaPausado, setEstaPausado] = useState(false);
+
+  const siguiente = () => {
+    setIndice((prevIndice) => (prevIndice + 1) % imagenes.length);
+  };
+
+  const anterior = () => {
+    setIndice((prevIndice) => (prevIndice - 1 + imagenes.length) % imagenes.length);
+  };
+
+  useEffect(() => {
+    if (estaPausado) return;
+    const intervalo = setInterval(() => {
+      siguiente();
+    }, 4000);
+    return () => clearInterval(intervalo);
+  }, [estaPausado]);
+
+  const productoActual = imagenes[indice];
+
+  return (
+    <section className="ruleta-seccion">
+      <div className="ruleta-contenedor">
+        <div
+          className="wanted-poster"
+          style={{
+            "--color-personaje": productoActual.color,
+            backgroundImage: `url(${texturaPergamino})`,
+          }}
+          onMouseEnter={() => setEstaPausado(true)}
+          onMouseLeave={() => setEstaPausado(false)}
+        >
+          {/* MARCO Y FOTO DE PRODUCTO */}
+          <div className="wanted-img-frame">
+            <img
+              key={indice}
+              src={productoActual.imagen}
+              alt={productoActual.titulo}
+              className="wanted-img"
+            />
+          </div>
+
+          {/* INFORMACIÓN Y DETALLES */}
+          <div className="wanted-info">
+            <h1 className="wanted-titulo">BUSCADO</h1>
+            <div className="wanted-status">VIVO O MUERTO</div>
+
+            <h2 className="wanted-nombre">{productoActual.titulo}</h2>
+
+            <div className="wanted-recompensa">
+              <span className="currency-tag">COP $</span>
+              <span>{productoActual.precio}</span>
+            </div>
+
+            <p className="wanted-descripcion">{productoActual.descripcion}</p>
+
+            <div className="wanted-botones">
+              <button onClick={anterior}>← Anterior</button>
+              <button onClick={siguiente}>Siguiente →</button>
+            </div>
+
+            <div className="wanted-indicador">
+              {indice + 1} / {imagenes.length}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export default Ruleta;

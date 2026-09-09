@@ -1,0 +1,1143 @@
+﻿// ============================================================
+// PÃGINA LOGIN
+// ============================================================
+
+import { useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import { Link } from "react-router-dom";
+import logo from "../assets/img/logo.png";
+import RegistroModal from "../components/RegistroModal";
+import RecuperarContrasena from "../components/RecuperarContraseña";
+
+// ============================================================
+// COMPONENTE LOGIN
+// ============================================================
+
+function Login() {
+  const { iniciarSesion } = useAuth();
+  // ==========================================================
+  // ESTADOS
+  // ==========================================================
+
+  const [mostrarPassword, setMostrarPassword] = useState(false);
+  const [mostrarRegistro, setMostrarRegistro] = useState(false);
+  const [mostrarRecuperar, setMostrarRecuperar] = useState(false);
+
+  const [formulario, setFormulario] = useState({
+    email: "",
+    password: "",
+  });
+
+  const [errores, setErrores] = useState({});
+  const [cargando, setCargando] = useState(false);
+
+  // NUEVO: estado para mostrar alerta de login exitoso
+  const [mostrarAlerta, setMostrarAlerta] = useState(false);
+
+  // ==========================================================
+  // MANEJAR CAMBIOS DEL FORMULARIO
+  // ==========================================================
+
+  const manejarCambio = (e) => {
+    const { name, value } = e.target;
+
+    setFormulario((anterior) => ({
+      ...anterior,
+      [name]: value,
+    }));
+
+    // ========================================================
+    // VALIDACIÃ“N EN TIEMPO REAL
+    // ========================================================
+
+    let mensaje = "";
+
+    if (name === "email") {
+      if (!value.trim()) {
+        mensaje = "El correo electrÃ³nico es obligatorio.";
+      } else if (
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+      ) {
+        mensaje = "Ingresa un correo electrÃ³nico vÃ¡lido.";
+      }
+    }
+
+    if (name === "password") {
+      if (!value) {
+        mensaje = "La contraseÃ±a es obligatoria.";
+      } else if (value.length < 9) {
+        mensaje = "La contraseÃ±a debe tener mÃ­nimo 8 caracteres.";
+      }
+    }
+
+    setErrores((anterior) => ({
+      ...anterior,
+      [name]: mensaje,
+    }));
+  };
+
+  // ==========================================================
+  // ABRIR REGISTRO
+  // ==========================================================
+
+  const abrirRegistro = () => {
+    setMostrarRegistro(true);
+  };
+
+  // ==========================================================
+  // CERRAR REGISTRO
+  // ==========================================================
+
+  const cerrarRegistro = () => {
+    setMostrarRegistro(false);
+  };
+
+  // ==========================================================
+  // ABRIR RECUPERAR CONTRASEÃ‘A
+  // ==========================================================
+
+  const abrirRecuperar = () => {
+    setMostrarRecuperar(true);
+  };
+
+  // ==========================================================
+  // CERRAR RECUPERAR CONTRASEÃ‘A
+  // ==========================================================
+
+  const cerrarRecuperar = () => {
+    setMostrarRecuperar(false);
+  };
+
+  // ==========================================================
+  // REGISTRO COMPLETADO
+  // ==========================================================
+
+  const manejarRegistro = (usuario) => {
+    console.log("Usuario registrado:", usuario);
+
+    setFormulario({
+      email: usuario.correo || usuario.email || "",
+      password: "",
+    });
+
+    setErrores({});
+    setMostrarRegistro(false);
+  };
+
+  // ==========================================================
+  // VALIDAR LOGIN
+  // ==========================================================
+
+  const validarLogin = () => {
+    const nuevosErrores = {};
+
+    // ========================================================
+    // EMAIL
+    // ========================================================
+
+    if (!formulario.email.trim()) {
+      nuevosErrores.email =
+        "El correo electrÃ³nico es obligatorio.";
+    } else if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+        formulario.email
+      )
+    ) {
+      nuevosErrores.email =
+        "Ingresa un correo electrÃ³nico vÃ¡lido.";
+    }
+
+    // ========================================================
+    // PASSWORD
+    // ========================================================
+
+    if (!formulario.password) {
+      nuevosErrores.password =
+        "La contraseÃ±a es obligatoria.";
+    } else if (formulario.password.length < 9) {
+      nuevosErrores.password =
+        "La contraseÃ±a debe tener mÃ­nimo 9 caracteres.";
+    }
+
+    setErrores(nuevosErrores);
+
+    return Object.keys(nuevosErrores).length === 0;
+  };
+
+  // ==========================================================
+  // INICIAR SESIÃ“N
+  // ==========================================================
+
+  const manejarSubmit = async (e) => {
+    e.preventDefault();
+
+    // ========================================================
+    // VALIDAR FORMULARIO
+    // ========================================================
+
+    if (!validarLogin()) {
+      return;
+    }
+
+    setCargando(true);
+    setErrores({});
+
+    try {
+      // ======================================================
+      // LOGIN CONTRA EL BACKEND
+      // ======================================================
+
+      const respuesta = await fetch(
+        ""http://127.0.0.1:8000/auth/login"",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json",
+          },
+
+          body: JSON.stringify({
+            email: formulario.email.trim().toLowerCase(),
+            password: formulario.password,
+          }),
+        }
+      );
+
+      const datos = await respuesta.json();
+
+      console.log(
+        "Respuesta del servidor:",
+        datos
+      );
+
+      // ======================================================
+      // LOGIN INCORRECTO
+      // ======================================================
+
+      if (!respuesta.ok || !datos.success) {
+        setErrores({
+          email:
+            datos.message ||
+            "El correo o la contraseÃ±a son incorrectos.",
+        });
+
+        return;
+      }
+
+      // ======================================================
+      // VERIFICAR TOKEN
+      // ======================================================
+
+      if (!datos.token) {
+        setErrores({
+          email:
+            "El servidor no devolviÃ³ un token de autenticaciÃ³n.",
+        });
+
+        return;
+      }
+
+      // ======================================================
+      // GUARDAR JWT
+      // ======================================================
+
+      const usuario = datos.usuario || {
+        email: formulario.email.trim().toLowerCase(),
+      };
+
+      iniciarSesion(usuario, datos.token);
+
+
+      // ======================================================
+      // MOSTRAR INFORMACIÃ“N EN CONSOLA
+      // ======================================================
+
+      console.log(
+        "Inicio de sesiÃ³n correcto:",
+        usuario
+      );
+
+      console.log(
+        "Rol del usuario:",
+        usuario.rol_id
+      );
+
+      // ======================================================
+      // ALERTA DE INICIO DE SESIÃ“N CORRECTO
+      // ======================================================
+
+      setMostrarAlerta(true);
+
+      // ======================================================
+      // REDIRECCIÃ“N SEGÃšN EL ROL
+      //
+      // 1 = Administrador
+      // 2 = Cliente
+      // ======================================================
+
+      setTimeout(() => {
+  const rol = Number(usuario.rol_id);
+
+  if (rol === 1) {
+    console.log("Administrador autenticado correctamente.");
+    window.location.href = "/admin";
+
+  } else if (rol === 2) {
+    console.log("Cliente autenticado correctamente.");
+    window.location.href = "/cliente";
+
+  } else if (rol === 3) {
+    console.log("Empleado autenticado correctamente.");
+    window.location.href = "/empleado";
+
+  } else {
+    console.log("Rol no reconocido.");
+    window.location.href = "/";
+  }
+}, 1800);
+
+  } catch (error) {
+    console.error(
+      "Error al iniciar sesiÃ³n:",
+      error
+    );
+
+    setErrores({
+      email:
+        "No se pudo conectar con el servidor. Verifica que el backend estÃ© ejecutÃ¡ndose.",
+    });
+  } finally {
+    setCargando(false);
+  }
+};
+
+// ==========================================================
+// MOSTRAR RECUPERAR CONTRASEÃ‘A
+// ==========================================================
+
+if (mostrarRecuperar) {
+  return (
+    <RecuperarContrasena
+      onBack={cerrarRecuperar}
+    />
+  );
+}
+
+// ==========================================================
+// RENDER LOGIN
+// ==========================================================
+
+return (
+  <>
+    <main
+      className="
+          min-h-screen
+          bg-[#EFE8DF]
+          text-[#52070A]
+          transition-colors
+          duration-500
+          dark:bg-[#160B0C]
+          dark:text-[#F8F3EA]
+        "
+    >
+      {/* ====================================================
+            HERO LOGIN
+        ==================================================== */}
+
+      <section
+        className="
+            relative
+            flex
+            min-h-screen
+            items-center
+            justify-center
+            overflow-hidden
+            px-6
+            py-16
+          "
+      >
+
+        {/* ==================================================
+              DECORACIONES
+          ================================================== */}
+
+        <div
+          className="
+              absolute
+              -right-40
+              -top-40
+              h-96
+              w-96
+              rounded-full
+              border
+              border-[#D4AF37]/20
+            "
+        />
+
+        <div
+          className="
+              absolute
+              -bottom-40
+              -left-40
+              h-96
+              w-96
+              rounded-full
+              border
+              border-[#7F0303]/10
+              dark:border-[#D4AF37]/10
+            "
+        />
+
+        <div
+          className="
+              absolute
+              left-1/2
+              top-1/2
+              h-[500px]
+              w-[500px]
+              -translate-x-1/2
+              -translate-y-1/2
+              rounded-full
+              bg-[#D4AF37]/5
+              blur-3xl
+              dark:bg-[#D4AF37]/10
+            "
+        />
+
+        {/* ==================================================
+              CONTENEDOR
+          ================================================== */}
+
+        <div
+          className="
+              relative
+              z-10
+              grid
+              w-full
+              max-w-5xl
+              overflow-hidden
+              rounded-[40px]
+              border
+              border-[#D8BA98]
+              bg-[#F8F3EA]
+              shadow-2xl
+              transition-colors
+              duration-500
+              dark:border-[#D4AF37]/30
+              dark:bg-[#241415]
+              lg:grid-cols-2
+            "
+        >
+
+          {/* ==================================================
+                PANEL IZQUIERDO
+            ================================================== */}
+
+          <div
+            className="
+                relative
+                hidden
+                overflow-hidden
+                bg-[#7F0303]
+                p-12
+                text-white
+                dark:bg-[#52070A]
+                lg:flex
+                lg:flex-col
+                lg:justify-between
+              "
+          >
+
+            <div
+              className="
+                  absolute
+                  -right-20
+                  -top-20
+                  h-64
+                  w-64
+                  rounded-full
+                  border
+                  border-[#D4AF37]/20
+                "
+            />
+
+            <div
+              className="
+                  absolute
+                  -bottom-32
+                  -left-32
+                  h-80
+                  w-80
+                  rounded-full
+                  border
+                  border-[#D4AF37]/10
+                "
+            />
+
+            {/* LOGO */}
+
+            <div className="relative z-10">
+
+              <img
+                src={logo}
+                alt="MUGI STORE"
+                className="
+                    h-24
+                    w-24
+                    object-contain
+                    transition-transform
+                    duration-300
+                    hover:scale-105
+                  "
+              />
+
+              <span
+                className="
+                    mt-8
+                    inline-block
+                    text-xs
+                    font-bold
+                    uppercase
+                    tracking-[0.35em]
+                    text-[#D4AF37]
+                  "
+              >
+                MUGI STORE
+              </span>
+
+              <h1
+                className="
+                    mt-5
+                    max-w-md
+                    font-serif
+                    text-5xl
+                    font-bold
+                    leading-tight
+                  "
+              >
+                Tu aventura
+
+                <span
+                  className="
+                      block
+                      text-[#D4AF37]
+                    "
+                >
+                  comienza aquÃ­.
+                </span>
+              </h1>
+
+              <p
+                className="
+                    mt-6
+                    max-w-md
+                    leading-relaxed
+                    text-white/70
+                  "
+              >
+                Entra a tu tripulaciÃ³n y continÃºa
+                explorando nuestra colecciÃ³n inspirada
+                en el Grand Line.
+              </p>
+
+            </div>
+
+            {/* FRASE */}
+
+            <div
+              className="
+                  relative
+                  z-10
+                  border-t
+                  border-white/20
+                  pt-6
+                "
+            >
+
+              <p
+                className="
+                    font-serif
+                    text-lg
+                    italic
+                    text-white/80
+                  "
+              >
+                "El mar siempre guarda una nueva aventura."
+              </p>
+
+              <p
+                className="
+                    mt-2
+                    text-xs
+                    uppercase
+                    tracking-[0.3em]
+                    text-[#D4AF37]
+                  "
+              >
+                â€” MUGI
+              </p>
+
+            </div>
+
+          </div>
+
+          {/* ==================================================
+                PANEL DERECHO
+            ================================================== */}
+
+          <div
+            className="
+                p-8
+                md:p-12
+                lg:p-14
+              "
+          >
+
+            {/* LOGO MOBILE */}
+
+            <div
+              className="
+                  mb-8
+                  text-center
+                  lg:hidden
+                "
+            >
+
+              <img
+                src={logo}
+                alt="MUGI STORE"
+                className="
+                    mx-auto
+                    h-24
+                    w-24
+                    object-contain
+                  "
+              />
+
+            </div>
+
+            {/* ENCABEZADO */}
+
+            <div>
+
+              <span
+                className="
+                    text-xs
+                    font-bold
+                    uppercase
+                    tracking-[0.35em]
+                    text-[#D4AF37]
+                  "
+              >
+                Bienvenido de nuevo
+              </span>
+
+              <h2
+                className="
+                    mt-4
+                    font-serif
+                    text-4xl
+                    font-bold
+                    text-[#7F0303]
+                    transition-colors
+                    duration-500
+                    dark:text-[#F8F3EA]
+                    md:text-5xl
+                  "
+              >
+                Iniciar sesiÃ³n
+              </h2>
+
+              <p
+                className="
+                    mt-4
+                    text-sm
+                    leading-relaxed
+                    text-[#765E52]
+                    dark:text-[#C8B9B5]
+                  "
+              >
+                Ingresa tus datos para continuar
+                tu aventura.
+              </p>
+
+            </div>
+
+            {/* FORMULARIO */}
+
+            <form
+              onSubmit={manejarSubmit}
+              className="
+                  mt-8
+                  space-y-6
+                "
+            >
+
+              {/* EMAIL */}
+
+              <div>
+
+                <label
+                  htmlFor="email"
+                  className="
+                      mb-2
+                      block
+                      text-sm
+                      font-semibold
+                      text-[#3D1717]
+                      dark:text-[#F8F3EA]/90
+                    "
+                >
+                  Correo electrÃ³nico
+                </label>
+
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formulario.email}
+                  onChange={manejarCambio}
+                  placeholder="ejemplo@email.com"
+                  required
+                  className={`
+                      w-full
+                      rounded-2xl
+                      border
+                      ${errores.email
+                      ? "border-[#7F0303]"
+                      : "border-[#D8BA98]"
+                    }
+                      bg-[#F8F3EA]
+                      px-5
+                      py-3.5
+                      text-[#3D1717]
+                      outline-none
+                      transition-all
+                      duration-300
+                      placeholder:text-[#927E70]
+                      focus:border-[#D4AF37]
+                      focus:ring-2
+                      focus:ring-[#D4AF37]/20
+                      dark:border-[#D4AF37]/25
+                      dark:bg-[#160B0C]
+                      dark:text-[#F8F3EA]
+                      dark:placeholder:text-[#C8B9B5]/50
+                      dark:focus:border-[#D4AF37]
+                    `}
+                />
+
+                {errores.email && (
+                  <p
+                    className="
+                        mt-2
+                        text-xs
+                        font-medium
+                        text-[#7F0303]
+                        dark:text-[#F0CC55]
+                      "
+                  >
+                    {errores.email}
+                  </p>
+                )}
+
+              </div>
+
+              {/* CONTRASEÃ‘A */}
+
+              <div>
+
+                <div
+                  className="
+                      mb-2
+                      flex
+                      items-center
+                      justify-between
+                    "
+                >
+
+                  <label
+                    htmlFor="password"
+                    className="
+                        text-sm
+                        font-semibold
+                        text-[#3D1717]
+                        dark:text-[#F8F3EA]/90
+                      "
+                  >
+                    ContraseÃ±a
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={abrirRecuperar}
+                    className="
+                        text-xs
+                        font-semibold
+                        text-[#7F0303]
+                        transition-colors
+                        hover:text-[#D4AF37]
+                        dark:text-[#D4AF37]
+                        dark:hover:text-[#F0CC55]
+                      "
+                  >
+                    Â¿La olvidaste?
+                  </button>
+
+                </div>
+
+                {/* INPUT PASSWORD */}
+
+                <div className="relative">
+
+                  <input
+                    id="password"
+                    name="password"
+                    type={
+                      mostrarPassword
+                        ? "text"
+                        : "password"
+                    }
+                    value={formulario.password}
+                    onChange={manejarCambio}
+                    placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                    required
+                    className={`
+                        w-full
+                        rounded-2xl
+                        border
+                        ${errores.password
+                        ? "border-[#7F0303]"
+                        : "border-[#D8BA98]"
+                      }
+                        bg-[#F8F3EA]
+                        px-5
+                        py-3.5
+                        pr-14
+                        text-[#3D1717]
+                        outline-none
+                        transition-all
+                        duration-300
+                        placeholder:text-[#927E70]/60
+                        focus:border-[#D4AF37]
+                        focus:ring-2
+                        focus:ring-[#D4AF37]/20
+                        dark:border-[#D4AF37]/25
+                        dark:bg-[#160B0C]
+                        dark:text-[#F8F3EA]
+                        dark:placeholder:text-[#C8B9B5]/50
+                        dark:focus:border-[#D4AF37]
+                      `}
+                  />
+
+                  {/* MOSTRAR PASSWORD */}
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setMostrarPassword(
+                        !mostrarPassword
+                      )
+                    }
+                    aria-label={
+                      mostrarPassword
+                        ? "Ocultar contraseÃ±a"
+                        : "Mostrar contraseÃ±a"
+                    }
+                    className="
+                        absolute
+                        right-4
+                        top-1/2
+                        -translate-y-1/2
+                        text-lg
+                        text-[#7F0303]
+                        transition-colors
+                        duration-300
+                        hover:text-[#D4AF37]
+                        dark:text-[#D4AF37]
+                        dark:hover:text-[#F0CC55]
+                      "
+                  >
+                    {mostrarPassword ? "â—‰" : "â—‹"}
+                  </button>
+
+                </div>
+
+                {errores.password && (
+                  <p
+                    className="
+                        mt-2
+                        text-xs
+                        font-medium
+                        text-[#7F0303]
+                        dark:text-[#F0CC55]
+                      "
+                  >
+                    {errores.password}
+                  </p>
+                )}
+
+              </div>
+
+              {/* RECORDAR */}
+
+              <div
+                className="
+                    flex
+                    items-center
+                    gap-3
+                  "
+              >
+
+                <input
+                  id="recordar"
+                  type="checkbox"
+                  className="
+                      h-4
+                      w-4
+                      accent-[#7F0303]
+                      dark:accent-[#D4AF37]
+                    "
+                />
+
+                <label
+                  htmlFor="recordar"
+                  className="
+                      text-sm
+                      text-[#765E52]
+                      dark:text-[#C8B9B5]
+                    "
+                >
+                  Recordar mi sesiÃ³n
+                </label>
+
+              </div>
+
+              {/* BOTÃ“N LOGIN */}
+
+              <button
+                type="submit"
+                disabled={cargando}
+                className="
+                    group
+                    flex
+                    w-full
+                    items-center
+                    justify-center
+                    gap-3
+                    rounded-full
+                    bg-[#7F0303]
+                    px-8
+                    py-4
+                    font-bold
+                    text-white
+                    shadow-lg
+                    transition-all
+                    duration-300
+                    hover:-translate-y-1
+                    hover:bg-[#52070A]
+                    hover:shadow-xl
+                    active:scale-[0.98]
+                    disabled:cursor-not-allowed
+                    disabled:opacity-60
+                    dark:bg-[#D4AF37]
+                    dark:text-[#3D1717]
+                    dark:hover:bg-[#F0CC55]
+                  "
+              >
+                {cargando
+                  ? "Iniciando sesiÃ³n..."
+                  : "Entrar a la tripulaciÃ³n"}
+
+                {!cargando && (
+                  <span
+                    className="
+                        text-lg
+                        transition-transform
+                        duration-300
+                        group-hover:translate-x-1
+                      "
+                  >
+                    â†’
+                  </span>
+                )}
+
+              </button>
+
+            </form>
+
+            {/* REGISTRO */}
+
+            <div
+              className="
+                  mt-8
+                  border-t
+                  border-[#D8BA98]
+                  pt-7
+                  text-center
+                  dark:border-[#D4AF37]/20
+                "
+            >
+
+              <p
+                className="
+                    text-sm
+                    text-[#765E52]
+                    dark:text-[#C8B9B5]
+                  "
+              >
+                Â¿TodavÃ­a no tienes una cuenta?
+              </p>
+
+              <button
+                type="button"
+                onClick={abrirRegistro}
+                className="
+                    mt-2
+                    inline-block
+                    font-semibold
+                    text-[#7F0303]
+                    transition-colors
+                    hover:text-[#D4AF37]
+                    dark:text-[#D4AF37]
+                    dark:hover:text-[#F0CC55]
+                  "
+              >
+                Crear una cuenta â†’
+              </button>
+
+            </div>
+
+            {/* VOLVER AL INICIO */}
+
+            <div
+              className="
+                  mt-6
+                  text-center
+                "
+            >
+
+              <Link
+                to="/"
+                className="
+                    text-xs
+                    uppercase
+                    tracking-[0.2em]
+                    text-[#927E70]
+                    transition-colors
+                    hover:text-[#7F0303]
+                    dark:text-[#C8B9B5]/60
+                    dark:hover:text-[#D4AF37]
+                  "
+              >
+                â† Volver al inicio
+              </Link>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+    </main>
+
+    {/* ======================================================
+          REGISTRO MODAL
+      ====================================================== */}
+
+    {mostrarRegistro && (
+      <RegistroModal
+        cerrarModal={cerrarRegistro}
+        alRegistrar={manejarRegistro}
+      />
+    )}
+
+    {/* ======================================================
+          ALERTA LOGIN EXITOSO
+      ====================================================== */}
+
+    {mostrarAlerta && (
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30 px-4">
+
+        <div
+          className="
+              w-full
+              max-w-sm
+              rounded-3xl
+              border
+              border-green-200
+              bg-[#F8F3EA]
+              p-7
+              text-center
+              shadow-2xl
+              dark:border-green-800
+              dark:bg-[#241415]
+            "
+        >
+
+          {/* ICONO */}
+
+          <div
+            className="
+                mx-auto
+                flex
+                h-16
+                w-16
+                items-center
+                justify-center
+                rounded-full
+                bg-green-100
+                text-3xl
+                font-bold
+                text-green-600
+                dark:bg-green-900/30
+                dark:text-green-400
+              "
+          >
+            âœ“
+          </div>
+
+          {/* MENSAJE */}
+
+          <h3
+            className="
+                mt-5
+                text-xl
+                font-bold
+                text-[#3D1717]
+                dark:text-[#F8F3EA]
+              "
+          >
+            Â¡Inicio de sesiÃ³n exitoso!
+          </h3>
+
+          <p
+            className="
+                mt-2
+                text-sm
+                text-[#765E52]
+                dark:text-[#C8B9B5]
+              "
+          >
+            Bienvenido de nuevo a MUGI STORE.
+          </p>
+
+        </div>
+
+      </div>
+    )}
+
+  </>
+);
+}
+
+// ============================================================
+// EXPORTACIÃ“N
+// ============================================================
+
+export default Login;
+
+
+
+

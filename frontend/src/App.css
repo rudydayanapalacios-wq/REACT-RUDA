@@ -1,0 +1,57 @@
+/* ===== PÁGINA PRINCIPAL ===== */
+
+.App {
+  min-height: 100vh;
+  background: #0b0b0b;
+  color: white;
+  font-family: Arial, sans-serif;
+}
+
+/* ===== PORTADA ===== */
+
+.inicio {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 40px;
+}
+
+/* Título principal */
+
+.inicio h1 {
+  font-size: 70px;
+  margin: 0 0 20px;
+  font-weight: bold;
+  letter-spacing: 3px;
+}
+
+/* Texto */
+
+.inicio p {
+  font-size: 20px;
+  max-width: 600px;
+  line-height: 1.6;
+  color: #cccccc;
+}
+
+/* Botón */
+
+.inicio button {
+  margin-top: 30px;
+  padding: 14px 35px;
+  border: 2px solid white;
+  background: transparent;
+  color: white;
+  font-size: 17px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.inicio button:hover {
+  background: white;
+  color: black;
+  transform: scale(1.05);
+}
