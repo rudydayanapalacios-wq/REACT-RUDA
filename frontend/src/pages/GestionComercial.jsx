@@ -7,32 +7,72 @@ import {
   Download,
   Eye,
   RefreshCw,
+  CalendarDays,
+  Search,
 } from "lucide-react";
 
 import { useLocation, useNavigate } from "react-router-dom";
-
 import { useAuth } from "../context/AuthContext";
+
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
+
+import { generarFacturaPDF } from "../utils/generarFacturaPDF";
 
 const API_URL = "http://127.0.0.1:8000";
 
 export default function GestionComercial() {
   const location = useLocation();
   const navigate = useNavigate();
-
   const { token, usuario } = useAuth();
 
   const [datos, setDatos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
 
+  const [descargandoFactura, setDescargandoFactura] = useState(null);
+
+  // ============================================================
+  // FECHA DEL REPORTE
+  // ============================================================
+
+  const obtenerFechaLocal = () => {
+    const fecha = new Date();
+
+    const año = fecha.getFullYear();
+    const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+    const dia = String(fecha.getDate()).padStart(2, "0");
+
+    return `${año}-${mes}-${dia}`;
+  };
+
+  const [fechaReporte, setFechaReporte] = useState(
+    obtenerFechaLocal()
+  );
+
+  const [mostrarTodas, setMostrarTodas] = useState(false);
+
+  // ============================================================
+  // CONSULTA DE FACTURAS
+  // ============================================================
+
+  const [busquedaFactura, setBusquedaFactura] = useState("");
+  const [busquedaCliente, setBusquedaCliente] = useState("");
+  const [fechaFactura, setFechaFactura] = useState("");
+
   // ============================================================
   // SABER EN QUÉ SECCIÓN ESTAMOS
   // ============================================================
 
-  const esEmpleado = location.pathname.startsWith("/empleado");
-  const esAdministrador = location.pathname.startsWith("/admin");
+  const esEmpleado =
+    location.pathname.startsWith("/empleado");
 
-  const modulo = location.pathname.split("/").pop();
+  const esAdministrador =
+    location.pathname.startsWith("/admin");
+
+  const modulo =
+    location.pathname.split("/").pop();
 
   const configuracion =
     {
@@ -92,7 +132,10 @@ export default function GestionComercial() {
           : []
       );
     } catch (errorCarga) {
-      console.error("Error cargando información:", errorCarga);
+      console.error(
+        "Error cargando información:",
+        errorCarga
+      );
 
       setError(
         errorCarga.message ||
@@ -138,6 +181,20 @@ export default function GestionComercial() {
   // ============================================================
 
   const obtenerCliente = (venta) => {
+    if (
+      venta.cliente &&
+      typeof venta.cliente === "object"
+    ) {
+      return (
+        venta.cliente.nombre ||
+        `${venta.cliente.nombres || ""} ${
+          venta.cliente.apellidos || ""
+        }`.trim() ||
+        venta.cliente.email ||
+        "Cliente"
+      );
+    }
+
     return (
       venta.cliente ||
       venta.usuario ||
@@ -189,6 +246,155 @@ export default function GestionComercial() {
   };
 
   // ============================================================
+  // FORMATO DE DINERO
+  // ============================================================
+
+  const formatearPrecio = (valor) => {
+    return `$${Number(
+      valor || 0
+    ).toLocaleString("es-CO")}`;
+  };
+
+  // ============================================================
+  // OBTENER FECHA YYYY-MM-DD
+  // ============================================================
+
+  const obtenerFechaComparacion = (venta) => {
+    if (!venta.fecha) {
+      return "";
+    }
+
+    const fecha = String(venta.fecha);
+
+    const coincidencia = fecha.match(
+      /^(\d{4}-\d{2}-\d{2})/
+    );
+
+    if (coincidencia) {
+      return coincidencia[1];
+    }
+
+    const fechaConvertida = new Date(fecha);
+
+    if (
+      Number.isNaN(
+        fechaConvertida.getTime()
+      )
+    ) {
+      return "";
+    }
+
+    const año =
+      fechaConvertida.getFullYear();
+
+    const mes = String(
+      fechaConvertida.getMonth() + 1
+    ).padStart(2, "0");
+
+    const dia = String(
+      fechaConvertida.getDate()
+    ).padStart(2, "0");
+
+    return `${año}-${mes}-${dia}`;
+  };
+
+  // ============================================================
+  // VENTAS DEL REPORTE
+  // ============================================================
+
+  const ventasDelDia = mostrarTodas
+    ? datos
+    : datos.filter(
+        (venta) =>
+          obtenerFechaComparacion(venta) ===
+          fechaReporte
+      );
+
+  // ============================================================
+  // CONSULTA DE FACTURAS
+  // ============================================================
+
+  const ventasFiltradas =
+    ventasDelDia.filter((venta) => {
+      const numeroFactura =
+        obtenerNumeroFactura(venta)
+          .toLowerCase();
+
+      const cliente =
+        obtenerCliente(venta)
+          .toLowerCase();
+
+      const textoFactura =
+        busquedaFactura
+          .trim()
+          .toLowerCase();
+
+      const textoCliente =
+        busquedaCliente
+          .trim()
+          .toLowerCase();
+
+      const coincideFactura =
+        !textoFactura ||
+        numeroFactura.includes(
+          textoFactura
+        );
+
+      const coincideCliente =
+        !textoCliente ||
+        cliente.includes(
+          textoCliente
+        );
+
+      const coincideFecha =
+        !fechaFactura ||
+        obtenerFechaComparacion(
+          venta
+        ) === fechaFactura;
+
+      return (
+        coincideFactura &&
+        coincideCliente &&
+        coincideFecha
+      );
+    });
+
+  // ============================================================
+  // TOTALES DEL REPORTE
+  // ============================================================
+
+  const totalVentasReporte =
+    ventasFiltradas.length;
+
+  const totalVendidoReporte =
+    ventasFiltradas.reduce(
+      (total, venta) =>
+        total + obtenerTotal(venta),
+      0
+    );
+
+  const totalProductosReporte =
+    ventasFiltradas.reduce(
+      (total, venta) => {
+        const detalles =
+          venta.detalles || [];
+
+        return (
+          total +
+          detalles.reduce(
+            (cantidad, detalle) =>
+              cantidad +
+              Number(
+                detalle.cantidad || 0
+              ),
+            0
+          )
+        );
+      },
+      0
+    );
+
+  // ============================================================
   // VER FACTURA
   // ============================================================
 
@@ -206,30 +412,878 @@ export default function GestionComercial() {
   };
 
   // ============================================================
-  // DESCARGAR PDF
-  //
-  // La factura se abre en la página de factura.
-  // Desde allí se puede generar/descargar el PDF.
-  // ============================================================
-const descargarPDF = (venta) => {
-  const id = obtenerIdVenta(venta);
-
-  if (!id) {
-    setError("No se encontró el identificador de esta venta.");
-    return;
-  }
-
-  navigate(`/factura/${id}`);
-};
-
-  // ============================================================
-  // FORMATO DE DINERO
+  // DESCARGAR FACTURA PDF DIRECTAMENTE
   // ============================================================
 
-  const formatearPrecio = (valor) => {
-    return `$${Number(valor || 0).toLocaleString(
-      "es-CO"
-    )}`;
+  const descargarPDF = async (venta) => {
+    const id = obtenerIdVenta(venta);
+
+    if (!id) {
+      setError(
+        "No se encontró el identificador de esta venta."
+      );
+      return;
+    }
+
+    if (!token) {
+      setError(
+        "No hay una sesión activa."
+      );
+      return;
+    }
+
+    if (descargandoFactura === id) {
+      return;
+    }
+
+    try {
+      setError("");
+      setDescargandoFactura(id);
+
+      console.log(
+        "Obteniendo factura para descargar:",
+        id
+      );
+
+      const respuesta = await fetch(
+        `${API_URL}/ventas/${id}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
+        }
+      );
+
+      const resultado =
+        await respuesta.json();
+
+      if (!respuesta.ok) {
+        throw new Error(
+          resultado.detail ||
+            "No se pudo obtener la información de la factura."
+        );
+      }
+
+      console.log(
+        "Factura obtenida:",
+        resultado
+      );
+
+      generarFacturaPDF(resultado);
+
+      console.log(
+        "PDF de factura generado correctamente."
+      );
+    } catch (errorPDF) {
+      console.error(
+        "Error descargando factura PDF:",
+        errorPDF
+      );
+
+      setError(
+        errorPDF.message ||
+          "No se pudo descargar la factura en PDF."
+      );
+    } finally {
+      setDescargandoFactura(null);
+    }
+  };
+
+  // ============================================================
+  // DESCARGAR REPORTE PDF
+  // ============================================================
+
+  const descargarReporteDiarioPDF =
+    async () => {
+      if (ventasFiltradas.length === 0) {
+        setError(
+          mostrarTodas
+            ? "No hay ventas registradas para generar el reporte."
+            : "No hay ventas en la fecha seleccionada."
+        );
+
+        return;
+      }
+
+      const doc = new jsPDF();
+
+      // ========================================================
+      // LOGO
+      // ========================================================
+
+      let logo = null;
+
+      try {
+        logo = await new Promise(
+          (resolve, reject) => {
+            const img = new Image();
+
+            img.onload = () =>
+              resolve(img);
+
+            img.onerror = reject;
+
+            img.src = "/img/logo.png";
+          }
+        );
+      } catch (errorLogo) {
+        console.warn(
+          "No se pudo cargar el logo:",
+          errorLogo
+        );
+      }
+
+      // ========================================================
+      // FECHA DEL REPORTE
+      // ========================================================
+
+      let fechaFormateada = "";
+
+      if (mostrarTodas) {
+        fechaFormateada =
+          "Todas las fechas";
+      } else {
+        const fechaSeleccionada =
+          new Date(
+            `${fechaReporte}T12:00:00`
+          );
+
+        fechaFormateada =
+          fechaSeleccionada.toLocaleDateString(
+            "es-CO",
+            {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+            }
+          );
+      }
+
+      // ========================================================
+      // FECHA DE GENERACIÓN
+      // ========================================================
+
+      const fechaGeneracion =
+        new Date().toLocaleString(
+          "es-CO",
+          {
+            dateStyle: "medium",
+            timeStyle: "short",
+          }
+        );
+
+      // ========================================================
+      // ENCABEZADO
+      // ========================================================
+
+      doc.setFillColor(
+        74,
+        5,
+        5
+      );
+
+      doc.rect(
+        0,
+        0,
+        210,
+        40,
+        "F"
+      );
+
+      if (logo) {
+        doc.addImage(
+          logo,
+          "PNG",
+          12,
+          7,
+          26,
+          26
+        );
+      }
+
+      doc.setTextColor(
+        255,
+        255,
+        255
+      );
+
+      doc.setFontSize(21);
+
+      doc.setFont(
+        "helvetica",
+        "bold"
+      );
+
+      doc.text(
+        "MUGI STORE",
+        45,
+        17
+      );
+
+      doc.setFontSize(10);
+
+      doc.setFont(
+        "helvetica",
+        "normal"
+      );
+
+      doc.text(
+        mostrarTodas
+          ? "REPORTE GENERAL DE VENTAS"
+          : "REPORTE DIARIO DE VENTAS",
+        45,
+        25
+      );
+
+      doc.setTextColor(
+        212,
+        175,
+        55
+      );
+
+      doc.setFontSize(8);
+
+      doc.text(
+        "Sistema de gestión comercial",
+        45,
+        32
+      );
+
+      doc.setDrawColor(
+        212,
+        175,
+        55
+      );
+
+      doc.setLineWidth(1);
+
+      doc.line(
+        12,
+        37,
+        198,
+        37
+      );
+
+      // ========================================================
+      // INFORMACIÓN
+      // ========================================================
+
+      doc.setTextColor(
+        61,
+        23,
+        23
+      );
+
+      doc.setFontSize(10);
+
+      doc.setFont(
+        "helvetica",
+        "bold"
+      );
+
+      doc.text(
+        "Información del reporte",
+        14,
+        51
+      );
+
+      doc.setFont(
+        "helvetica",
+        "normal"
+      );
+
+      doc.text(
+        `Fecha del reporte: ${fechaFormateada}`,
+        14,
+        59
+      );
+
+      doc.text(
+        `Fecha de generación: ${fechaGeneracion}`,
+        14,
+        66
+      );
+
+      // ========================================================
+      // RESUMEN
+      // ========================================================
+
+      doc.setFillColor(
+        248,
+        243,
+        234
+      );
+
+      doc.roundedRect(
+        14,
+        73,
+        56,
+        25,
+        3,
+        3,
+        "F"
+      );
+
+      doc.roundedRect(
+        77,
+        73,
+        56,
+        25,
+        3,
+        3,
+        "F"
+      );
+
+      doc.roundedRect(
+        140,
+        73,
+        56,
+        25,
+        3,
+        3,
+        "F"
+      );
+
+      doc.setTextColor(
+        118,
+        94,
+        82
+      );
+
+      doc.setFontSize(8);
+
+      doc.setFont(
+        "helvetica",
+        "bold"
+      );
+
+      doc.text(
+        "VENTAS",
+        18,
+        81
+      );
+
+      doc.text(
+        "PRODUCTOS",
+        81,
+        81
+      );
+
+      doc.text(
+        "TOTAL VENDIDO",
+        144,
+        81
+      );
+
+      doc.setTextColor(
+        127,
+        3,
+        3
+      );
+
+      doc.setFontSize(13);
+
+      doc.text(
+        String(totalVentasReporte),
+        18,
+        91
+      );
+
+      doc.text(
+        String(totalProductosReporte),
+        81,
+        91
+      );
+
+      doc.setFontSize(11);
+
+      doc.text(
+        formatearPrecio(
+          totalVendidoReporte
+        ),
+        144,
+        91
+      );
+
+      // ========================================================
+      // FILAS
+      // ========================================================
+
+      const filas = [];
+
+      ventasFiltradas.forEach(
+        (venta) => {
+          const detalles =
+            venta.detalles || [];
+
+          if (detalles.length === 0) {
+            filas.push([
+              obtenerNumeroFactura(
+                venta
+              ),
+              obtenerCliente(
+                venta
+              ),
+              "Sin productos",
+              "-",
+              "-",
+              formatearPrecio(
+                obtenerTotal(venta)
+              ),
+              venta.estado ||
+                "Sin estado",
+            ]);
+
+            return;
+          }
+
+          detalles.forEach(
+            (detalle) => {
+              filas.push([
+                obtenerNumeroFactura(
+                  venta
+                ),
+                obtenerCliente(
+                  venta
+                ),
+                detalle.producto ||
+                  "Producto",
+                detalle.cantidad || 0,
+                formatearPrecio(
+                  detalle.precio_unitario
+                ),
+                formatearPrecio(
+                  detalle.subtotal
+                ),
+                venta.estado ||
+                  "Sin estado",
+              ]);
+            }
+          );
+        }
+      );
+
+      // ========================================================
+      // TABLA
+      // ========================================================
+
+      autoTable(doc, {
+        startY: 106,
+
+        head: [
+          [
+            "N° Venta",
+            "Cliente",
+            "Producto",
+            "Cantidad",
+            "Valor",
+            "Total",
+            "Estado",
+          ],
+        ],
+
+        body: filas,
+
+        theme: "grid",
+
+        styles: {
+          fontSize: 7.5,
+          cellPadding: 3,
+          textColor: [
+            61,
+            23,
+            23,
+          ],
+          valign: "middle",
+        },
+
+        headStyles: {
+          fillColor: [
+            127,
+            3,
+            3,
+          ],
+          textColor: [
+            255,
+            255,
+            255,
+          ],
+          fontStyle: "bold",
+          halign: "center",
+          valign: "middle",
+        },
+
+        alternateRowStyles: {
+          fillColor: [
+            248,
+            243,
+            234,
+          ],
+        },
+
+        columnStyles: {
+          0: {
+            cellWidth: 28,
+          },
+
+          1: {
+            cellWidth: 31,
+          },
+
+          2: {
+            cellWidth: 36,
+          },
+
+          3: {
+            halign: "center",
+            cellWidth: 17,
+          },
+
+          4: {
+            halign: "right",
+            cellWidth: 24,
+          },
+
+          5: {
+            halign: "right",
+            cellWidth: 25,
+          },
+
+          6: {
+            cellWidth: 25,
+          },
+        },
+
+        margin: {
+          left: 14,
+          right: 14,
+        },
+
+        didDrawPage: (data) => {
+          if (data.pageNumber > 1) {
+            doc.setFillColor(
+              74,
+              5,
+              5
+            );
+
+            doc.rect(
+              0,
+              0,
+              210,
+              15,
+              "F"
+            );
+
+            doc.setTextColor(
+              255,
+              255,
+              255
+            );
+
+            doc.setFontSize(8);
+
+            doc.setFont(
+              "helvetica",
+              "bold"
+            );
+
+            doc.text(
+              "MUGI STORE · Reporte de ventas",
+              14,
+              10
+            );
+          }
+
+          doc.setTextColor(
+            118,
+            94,
+            82
+          );
+
+          doc.setFontSize(8);
+
+          doc.setFont(
+            "helvetica",
+            "normal"
+          );
+
+          doc.text(
+            `Página ${data.pageNumber}`,
+            180,
+            290
+          );
+        },
+      });
+
+      // ========================================================
+      // TOTALES FINALES
+      // ========================================================
+
+      let posicionFinal =
+        doc.lastAutoTable?.finalY ||
+        106;
+
+      if (posicionFinal > 245) {
+        doc.addPage();
+        posicionFinal = 25;
+      }
+
+      const inicioTotales =
+        posicionFinal + 15;
+
+      doc.setDrawColor(
+        212,
+        175,
+        55
+      );
+
+      doc.setLineWidth(0.8);
+
+      doc.line(
+        14,
+        inicioTotales - 5,
+        196,
+        inicioTotales - 5
+      );
+
+      doc.setFont(
+        "helvetica",
+        "bold"
+      );
+
+      doc.setFontSize(10);
+
+      doc.setTextColor(
+        127,
+        3,
+        3
+      );
+
+      doc.text(
+        `Total de ventas: ${totalVentasReporte}`,
+        14,
+        inicioTotales + 3
+      );
+
+      doc.text(
+        `Total de productos: ${totalProductosReporte}`,
+        14,
+        inicioTotales + 11
+      );
+
+      doc.text(
+        `Total vendido: ${formatearPrecio(
+          totalVendidoReporte
+        )}`,
+        14,
+        inicioTotales + 19
+      );
+
+      // ========================================================
+      // PIE
+      // ========================================================
+
+      const paginas =
+        doc.getNumberOfPages();
+
+      for (
+        let pagina = 1;
+        pagina <= paginas;
+        pagina++
+      ) {
+        doc.setPage(pagina);
+
+        doc.setFont(
+          "helvetica",
+          "normal"
+        );
+
+        doc.setFontSize(8);
+
+        doc.setTextColor(
+          118,
+          94,
+          82
+        );
+
+        doc.text(
+          "MUGI STORE · Reporte generado por el sistema",
+          14,
+          285
+        );
+
+        doc.text(
+          `Página ${pagina} de ${paginas}`,
+          165,
+          285
+        );
+      }
+
+      // ========================================================
+      // DESCARGAR
+      // ========================================================
+
+      const nombreArchivo =
+        mostrarTodas
+          ? "Reporte_General_MUGI.pdf"
+          : `Reporte_Diario_MUGI_${fechaReporte}.pdf`;
+
+      doc.save(nombreArchivo);
+    };
+
+  // ============================================================
+  // DESCARGAR REPORTE EXCEL
+  // ============================================================
+
+  const descargarReporteExcel = () => {
+    if (ventasFiltradas.length === 0) {
+      setError(
+        mostrarTodas
+          ? "No hay ventas registradas para generar el archivo Excel."
+          : "No hay ventas en la fecha seleccionada."
+      );
+
+      return;
+    }
+
+    const filas = [];
+
+    ventasFiltradas.forEach(
+      (venta) => {
+        const detalles =
+          venta.detalles || [];
+
+        if (detalles.length === 0) {
+          filas.push({
+            "N° Venta":
+              obtenerNumeroFactura(
+                venta
+              ),
+
+            Fecha:
+              obtenerFecha(venta),
+
+            Cliente:
+              obtenerCliente(venta),
+
+            Producto:
+              "Sin productos",
+
+            Cantidad: 0,
+
+            "Precio unitario": 0,
+
+            Subtotal: 0,
+
+            "Total venta":
+              obtenerTotal(venta),
+
+            Estado:
+              venta.estado ||
+              "Sin estado",
+          });
+
+          return;
+        }
+
+        detalles.forEach(
+          (detalle) => {
+            filas.push({
+              "N° Venta":
+                obtenerNumeroFactura(
+                  venta
+                ),
+
+              Fecha:
+                obtenerFecha(venta),
+
+              Cliente:
+                obtenerCliente(
+                  venta
+                ),
+
+              Producto:
+                detalle.producto ||
+                "Producto",
+
+              Cantidad:
+                Number(
+                  detalle.cantidad ||
+                    0
+                ),
+
+              "Precio unitario":
+                Number(
+                  detalle.precio_unitario ||
+                    0
+                ),
+
+              Subtotal:
+                Number(
+                  detalle.subtotal ||
+                    0
+                ),
+
+              "Total venta":
+                obtenerTotal(venta),
+
+              Estado:
+                venta.estado ||
+                "Sin estado",
+            });
+          }
+        );
+      }
+    );
+
+    const hoja =
+      XLSX.utils.json_to_sheet(
+        filas
+      );
+
+    hoja["!cols"] = [
+      { wch: 24 },
+      { wch: 22 },
+      { wch: 28 },
+      { wch: 30 },
+      { wch: 12 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 18 },
+    ];
+
+    const libro =
+      XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(
+      libro,
+      hoja,
+      "Reporte de ventas"
+    );
+
+    const nombreArchivo =
+      mostrarTodas
+        ? "Reporte_General_MUGI.xlsx"
+        : `Reporte_Diario_MUGI_${fechaReporte}.xlsx`;
+
+    XLSX.writeFile(
+      libro,
+      nombreArchivo
+    );
+  };
+
+  // ============================================================
+  // LIMPIAR FILTROS
+  // ============================================================
+
+  const limpiarFiltros = () => {
+    setBusquedaFactura("");
+    setBusquedaCliente("");
+    setFechaFactura("");
   };
 
   // ============================================================
@@ -245,7 +1299,6 @@ const descargarPDF = (venta) => {
         ====================================================== */}
 
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#D4AF37]">
               MUGI · Administración
@@ -262,7 +1315,9 @@ const descargarPDF = (venta) => {
 
           <button
             type="button"
-            onClick={() => navigate("/perfil")}
+            onClick={() =>
+              navigate("/perfil")
+            }
             className="flex items-center gap-2 rounded-2xl border border-[#D8BA98] bg-[#F8F3EA] px-4 py-3 text-sm font-semibold text-[#7F0303] transition hover:bg-white"
           >
             <UserRound size={17} />
@@ -280,7 +1335,9 @@ const descargarPDF = (venta) => {
             <>
               <button
                 type="button"
-                onClick={() => navigate("/admin")}
+                onClick={() =>
+                  navigate("/admin")
+                }
                 className="rounded-xl border border-[#D8BA98] bg-[#F8F3EA] px-4 py-2 text-sm font-semibold text-[#765E52] transition hover:bg-white"
               >
                 Resumen
@@ -288,7 +1345,11 @@ const descargarPDF = (venta) => {
 
               <button
                 type="button"
-                onClick={() => navigate("/admin/usuarios")}
+                onClick={() =>
+                  navigate(
+                    "/admin/usuarios"
+                  )
+                }
                 className="rounded-xl border border-[#D8BA98] bg-[#F8F3EA] px-4 py-2 text-sm font-semibold text-[#765E52] transition hover:bg-white"
               >
                 Cuentas
@@ -296,7 +1357,11 @@ const descargarPDF = (venta) => {
 
               <button
                 type="button"
-                onClick={() => navigate("/admin/productos")}
+                onClick={() =>
+                  navigate(
+                    "/admin/productos"
+                  )
+                }
                 className="rounded-xl border border-[#D8BA98] bg-[#F8F3EA] px-4 py-2 text-sm font-semibold text-[#765E52] transition hover:bg-white"
               >
                 Productos
@@ -308,7 +1373,9 @@ const descargarPDF = (venta) => {
             <>
               <button
                 type="button"
-                onClick={() => navigate("/empleado")}
+                onClick={() =>
+                  navigate("/empleado")
+                }
                 className="rounded-xl border border-[#D8BA98] bg-[#F8F3EA] px-4 py-2 text-sm font-semibold text-[#765E52] transition hover:bg-white"
               >
                 Operación
@@ -317,7 +1384,9 @@ const descargarPDF = (venta) => {
               <button
                 type="button"
                 onClick={() =>
-                  navigate("/empleado/productos")
+                  navigate(
+                    "/empleado/productos"
+                  )
                 }
                 className="rounded-xl border border-[#D8BA98] bg-[#F8F3EA] px-4 py-2 text-sm font-semibold text-[#765E52] transition hover:bg-white"
               >
@@ -347,7 +1416,6 @@ const descargarPDF = (venta) => {
 
         {error && (
           <div className="mb-6 flex items-center justify-between gap-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
-
             <span>{error}</span>
 
             <button
@@ -386,29 +1454,377 @@ const descargarPDF = (venta) => {
                   Consulta las operaciones realizadas en MUGI STORE.
                 </p>
               </div>
+
             </div>
 
-            <button
-              type="button"
-              onClick={cargarDatos}
-              disabled={cargando}
-              className="flex items-center gap-2 rounded-xl border border-[#D8BA98] bg-white px-4 py-2 text-sm font-semibold text-[#7F0303] transition hover:bg-[#FFF9F0] disabled:opacity-50"
-            >
-              <RefreshCw
-                size={16}
-                className={
-                  cargando
-                    ? "animate-spin"
-                    : ""
-                }
-              />
+            <div className="flex flex-wrap items-center gap-2">
 
-              Actualizar
-            </button>
+              <button
+                type="button"
+                onClick={
+                  descargarReporteDiarioPDF
+                }
+                className="flex h-[42px] items-center gap-2 rounded-xl bg-[#7F0303] px-4 text-sm font-bold text-white shadow-sm transition hover:bg-[#5F0202]"
+              >
+                <Download size={16} />
+
+                {mostrarTodas
+                  ? "Reporte general PDF"
+                  : "Reporte diario PDF"}
+              </button>
+
+              <button
+                type="button"
+                onClick={
+                  descargarReporteExcel
+                }
+                className="flex h-[42px] items-center gap-2 rounded-xl bg-[#2F6B3C] px-4 text-sm font-bold text-white shadow-sm transition hover:bg-[#24552F]"
+              >
+                <Download size={16} />
+                Excel
+              </button>
+
+              <button
+                type="button"
+                onClick={cargarDatos}
+                disabled={cargando}
+                className="flex h-[42px] items-center gap-2 rounded-xl border border-[#D8BA98] bg-white px-4 text-sm font-semibold text-[#7F0303] transition hover:bg-[#FFF9F0] disabled:opacity-50"
+              >
+                <RefreshCw
+                  size={16}
+                  className={
+                    cargando
+                      ? "animate-spin"
+                      : ""
+                  }
+                />
+
+                Actualizar
+              </button>
+
+            </div>
           </div>
 
           {/* ====================================================
-              CARGANDO
+              SELECTOR DE FECHA
+          ==================================================== */}
+
+          <div className="border-b border-[#D8BA98]/60 bg-[#FFF9F0] p-6">
+
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+
+              <div>
+
+                <div className="mb-2 flex items-center gap-2">
+
+                  <CalendarDays
+                    size={18}
+                    className="text-[#7F0303]"
+                  />
+
+                  <h3 className="font-serif text-lg font-bold text-[#7F0303]">
+                    Reporte de ventas
+                  </h3>
+
+                </div>
+
+                <p className="text-sm text-[#765E52]">
+                  Selecciona una fecha para consultar las ventas de ese día o visualiza todas las ventas.
+                </p>
+
+              </div>
+
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+
+                <div>
+
+                  <label
+                    htmlFor="fechaReporte"
+                    className="mb-1 block text-xs font-bold uppercase tracking-wider text-[#765E52]"
+                  >
+                    Fecha
+                  </label>
+
+                  <input
+                    id="fechaReporte"
+                    type="date"
+                    value={fechaReporte}
+                    disabled={mostrarTodas}
+                    onChange={(e) => {
+                      setFechaReporte(
+                        e.target.value
+                      );
+
+                      setMostrarTodas(
+                        false
+                      );
+                    }}
+                    className="h-[42px] rounded-xl border border-[#D8BA98] bg-white px-4 text-sm font-semibold text-[#3D1717] outline-none transition focus:border-[#7F0303] focus:ring-2 focus:ring-[#7F0303]/10 disabled:cursor-not-allowed disabled:bg-[#EFE8DF] disabled:opacity-70"
+                  />
+
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setMostrarTodas(true)
+                  }
+                  className={`flex h-[42px] items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold transition ${
+                    mostrarTodas
+                      ? "bg-[#D4AF37] text-[#4A0505]"
+                      : "border border-[#D8BA98] bg-white text-[#7F0303] hover:bg-[#FFF9F0]"
+                  }`}
+                >
+                  <FileText size={16} />
+                  Ver todas
+                </button>
+
+                <button
+                  type="button"
+                  onClick={
+                    descargarReporteDiarioPDF
+                  }
+                  className="flex h-[42px] items-center justify-center gap-2 rounded-xl bg-[#D4AF37] px-4 text-sm font-bold text-[#4A0505] transition hover:bg-[#C49F2E]"
+                >
+                  <Download size={16} />
+
+                  {mostrarTodas
+                    ? "Descargar todas"
+                    : "Descargar reporte"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={
+                    descargarReporteExcel
+                  }
+                  className="flex h-[42px] items-center justify-center gap-2 rounded-xl border border-[#2F6B3C] bg-white px-4 text-sm font-bold text-[#2F6B3C] transition hover:bg-[#F0F8F2]"
+                >
+                  <Download size={16} />
+                  Excel
+                </button>
+
+              </div>
+
+            </div>
+
+            <div className="mt-4">
+
+              {mostrarTodas ? (
+                <div className="rounded-xl border border-[#D4AF37]/50 bg-[#D4AF37]/10 px-4 py-3 text-sm font-semibold text-[#7F0303]">
+                  Mostrando todas las ventas registradas, sin importar la fecha.
+                </div>
+              ) : (
+                <div className="rounded-xl border border-[#D8BA98] bg-white px-4 py-3 text-sm font-semibold text-[#765E52]">
+                  Mostrando ventas del{" "}
+                  {new Date(
+                    `${fechaReporte}T12:00:00`
+                  ).toLocaleDateString(
+                    "es-CO",
+                    {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    }
+                  )}
+                  .
+                </div>
+              )}
+
+            </div>
+
+            {/* RESUMEN */}
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+
+              <div className="rounded-2xl border border-[#D8BA98] bg-white p-4">
+                <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">
+                  {mostrarTodas
+                    ? "Total de ventas"
+                    : "Ventas del día"}
+                </p>
+
+                <p className="mt-1 text-2xl font-bold text-[#7F0303]">
+                  {totalVentasReporte}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-[#D8BA98] bg-white p-4">
+                <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">
+                  Productos vendidos
+                </p>
+
+                <p className="mt-1 text-2xl font-bold text-[#7F0303]">
+                  {totalProductosReporte}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-[#D8BA98] bg-white p-4">
+                <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">
+                  Total vendido
+                </p>
+
+                <p className="mt-1 text-2xl font-bold text-[#7F0303]">
+                  {formatearPrecio(
+                    totalVendidoReporte
+                  )}
+                </p>
+              </div>
+
+            </div>
+
+          </div>
+
+          {/* ====================================================
+              CONSULTA DE FACTURAS
+          ==================================================== */}
+
+          <div className="border-b border-[#D8BA98]/60 bg-white p-6">
+
+            <div className="mb-4 flex items-center gap-2">
+
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#7F0303]/10 text-[#7F0303]">
+                <Search size={18} />
+              </div>
+
+              <div>
+                <h3 className="font-serif text-lg font-bold text-[#7F0303]">
+                  Consultar facturas
+                </h3>
+
+                <p className="text-sm text-[#765E52]">
+                  Busca facturas por número, cliente o fecha.
+                </p>
+              </div>
+
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+
+              <div>
+
+                <label
+                  htmlFor="busquedaFactura"
+                  className="mb-1 block text-xs font-bold uppercase tracking-wider text-[#765E52]"
+                >
+                  Número de factura
+                </label>
+
+                <div className="relative">
+
+                  <Search
+                    size={16}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[#927E70]"
+                  />
+
+                  <input
+                    id="busquedaFactura"
+                    type="text"
+                    value={busquedaFactura}
+                    onChange={(e) =>
+                      setBusquedaFactura(
+                        e.target.value
+                      )
+                    }
+                    placeholder="Ej: FAC-20260918..."
+                    className="h-[42px] w-full rounded-xl border border-[#D8BA98] bg-[#F8F3EA] pl-9 pr-4 text-sm text-[#3D1717] outline-none transition focus:border-[#7F0303] focus:ring-2 focus:ring-[#7F0303]/10"
+                  />
+
+                </div>
+
+              </div>
+
+              <div>
+
+                <label
+                  htmlFor="busquedaCliente"
+                  className="mb-1 block text-xs font-bold uppercase tracking-wider text-[#765E52]"
+                >
+                  Cliente
+                </label>
+
+                <div className="relative">
+
+                  <UserRound
+                    size={16}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[#927E70]"
+                  />
+
+                  <input
+                    id="busquedaCliente"
+                    type="text"
+                    value={busquedaCliente}
+                    onChange={(e) =>
+                      setBusquedaCliente(
+                        e.target.value
+                      )
+                    }
+                    placeholder="Nombre o correo"
+                    className="h-[42px] w-full rounded-xl border border-[#D8BA98] bg-[#F8F3EA] pl-9 pr-4 text-sm text-[#3D1717] outline-none transition focus:border-[#7F0303] focus:ring-2 focus:ring-[#7F0303]/10"
+                  />
+
+                </div>
+
+              </div>
+
+              <div>
+
+                <label
+                  htmlFor="fechaFactura"
+                  className="mb-1 block text-xs font-bold uppercase tracking-wider text-[#765E52]"
+                >
+                  Fecha de factura
+                </label>
+
+                <div className="relative">
+
+                  <CalendarDays
+                    size={16}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[#927E70]"
+                  />
+
+                  <input
+                    id="fechaFactura"
+                    type="date"
+                    value={fechaFactura}
+                    onChange={(e) =>
+                      setFechaFactura(
+                        e.target.value
+                      )
+                    }
+                    className="h-[42px] w-full rounded-xl border border-[#D8BA98] bg-[#F8F3EA] pl-9 pr-4 text-sm font-semibold text-[#3D1717] outline-none transition focus:border-[#7F0303] focus:ring-2 focus:ring-[#7F0303]/10"
+                  />
+
+                </div>
+
+              </div>
+
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+
+              <p className="text-sm font-semibold text-[#765E52]">
+                {ventasFiltradas.length}{" "}
+                {ventasFiltradas.length === 1
+                  ? "factura encontrada"
+                  : "facturas encontradas"}
+                .
+              </p>
+
+              <button
+                type="button"
+                onClick={limpiarFiltros}
+                className="rounded-xl border border-[#D8BA98] bg-[#F8F3EA] px-4 py-2 text-sm font-bold text-[#7F0303] transition hover:bg-[#FFF9F0]"
+              >
+                Limpiar filtros
+              </button>
+
+            </div>
+
+          </div>
+
+          {/* ====================================================
+              CARGANDO / RESULTADOS
           ==================================================== */}
 
           {cargando ? (
@@ -422,14 +1838,9 @@ const descargarPDF = (venta) => {
               <p className="text-sm font-semibold text-[#765E52]">
                 Cargando ventas...
               </p>
+
             </div>
-
           ) : datos.length === 0 ? (
-
-            /* ==================================================
-               SIN VENTAS
-            ================================================== */
-
             <div className="p-12 text-center">
 
               <FileText
@@ -444,136 +1855,325 @@ const descargarPDF = (venta) => {
               <p className="mt-2 text-sm text-[#765E52]">
                 Cuando se registre una compra aparecerá aquí.
               </p>
+
             </div>
+          ) : ventasFiltradas.length === 0 ? (
+            <div className="p-12 text-center">
 
+              {busquedaFactura ||
+              busquedaCliente ||
+              fechaFactura ? (
+                <Search
+                  size={42}
+                  className="mx-auto mb-4 text-[#D8BA98]"
+                />
+              ) : (
+                <CalendarDays
+                  size={42}
+                  className="mx-auto mb-4 text-[#D8BA98]"
+                />
+              )}
+
+              <h3 className="font-serif text-xl font-bold text-[#7F0303]">
+                {busquedaFactura ||
+                busquedaCliente ||
+                fechaFactura
+                  ? "No se encontraron facturas"
+                  : "No hay ventas en esta fecha"}
+              </h3>
+
+              <p className="mt-2 text-sm text-[#765E52]">
+                {busquedaFactura ||
+                busquedaCliente ||
+                fechaFactura
+                  ? "No existen facturas que coincidan con los criterios de búsqueda."
+                  : `No se encontraron ventas registradas para ${new Date(
+                      `${fechaReporte}T12:00:00`
+                    ).toLocaleDateString(
+                      "es-CO",
+                      {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      }
+                    )}.`}
+              </p>
+
+              {busquedaFactura ||
+              busquedaCliente ||
+              fechaFactura ? (
+                <button
+                  type="button"
+                  onClick={limpiarFiltros}
+                  className="mt-5 rounded-xl bg-[#7F0303] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#5F0202]"
+                >
+                  Limpiar filtros
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setMostrarTodas(true)
+                  }
+                  className="mt-5 rounded-xl bg-[#7F0303] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#5F0202]"
+                >
+                  Ver todas las ventas
+                </button>
+              )}
+
+            </div>
           ) : (
-
-            /* ==================================================
-               LISTA DE VENTAS
-            ================================================== */
-
             <div className="divide-y divide-[#D8BA98]/50">
 
-              {datos.map((venta, indice) => {
+              {ventasFiltradas.map(
+                (venta, indice) => {
+                  const idVenta =
+                    obtenerIdVenta(
+                      venta
+                    );
 
-                const idVenta =
-                  obtenerIdVenta(venta);
+                  const total =
+                    obtenerTotal(
+                      venta
+                    );
 
-                const total =
-                  obtenerTotal(venta);
+                  const cliente =
+                    obtenerCliente(
+                      venta
+                    );
 
-                const cliente =
-                  obtenerCliente(venta);
+                  const fecha =
+                    obtenerFecha(
+                      venta
+                    );
 
-                const fecha =
-                  obtenerFecha(venta);
+                  const numeroFactura =
+                    obtenerNumeroFactura(
+                      venta
+                    );
 
-                const numeroFactura =
-                  obtenerNumeroFactura(venta);
+                  const estaDescargando =
+                    descargandoFactura ===
+                    idVenta;
 
-                return (
-                  <div
-                    key={
-                      idVenta ||
-                      `venta-${indice}`
-                    }
-                    className="p-6 transition hover:bg-[#FFF9F0]"
-                  >
+                  return (
+                    <div
+                      key={
+                        idVenta ||
+                        `venta-${indice}`
+                      }
+                      className="p-6 transition hover:bg-[#FFF9F0]"
+                    >
 
-                    <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                      <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
 
-                      {/* INFORMACIÓN */}
+                        {/* INFORMACIÓN */}
 
-                      <div className="flex items-start gap-4">
+                        <div className="flex items-start gap-4">
 
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#7F0303]/10 text-[#7F0303]">
-                          <FileText size={20} />
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#7F0303]/10 text-[#7F0303]">
+                            <FileText
+                              size={20}
+                            />
+                          </div>
+
+                          <div>
+
+                            <p className="font-bold text-[#3D1717]">
+                              {numeroFactura}
+                            </p>
+
+                            <p className="mt-1 text-sm font-semibold text-[#765E52]">
+                              {cliente}
+                            </p>
+
+                            <p className="mt-1 text-xs text-[#927E70]">
+                              {fecha}
+                            </p>
+
+                          </div>
+
                         </div>
 
-                        <div>
+                        {/* TOTAL + ACCIONES */}
 
-                          <p className="font-bold text-[#3D1717]">
-                            {numeroFactura}
-                          </p>
+                        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
 
-                          <p className="mt-1 text-sm font-semibold text-[#765E52]">
-                            {cliente}
-                          </p>
+                          <div className="mr-2">
 
-                          <p className="mt-1 text-xs text-[#927E70]">
-                            {fecha}
-                          </p>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-[#927E70]">
+                              Total
+                            </p>
+
+                            <p className="text-xl font-bold text-[#7F0303]">
+                              {formatearPrecio(
+                                total
+                              )}
+                            </p>
+
+                          </div>
+
+                          {/* VER FACTURA */}
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              verFactura(
+                                venta
+                              )
+                            }
+                            className="flex h-[42px] items-center gap-2 rounded-xl border border-[#7F0303] bg-white px-4 text-xs font-bold text-[#7F0303] transition hover:bg-[#7F0303] hover:text-white"
+                          >
+                            <Eye
+                              size={16}
+                            />
+                            Ver factura
+                          </button>
+
+                          {/* DESCARGAR FACTURA PDF */}
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              descargarPDF(
+                                venta
+                              )
+                            }
+                            disabled={
+                              estaDescargando
+                            }
+                            className="flex h-[42px] items-center gap-2 rounded-xl bg-[#7F0303] px-4 text-xs font-bold text-white shadow-sm transition hover:bg-[#5F0202] disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+
+                            {estaDescargando ? (
+                              <>
+                                <RefreshCw
+                                  size={16}
+                                  className="animate-spin"
+                                />
+                                Generando...
+                              </>
+                            ) : (
+                              <>
+                                <Download
+                                  size={16}
+                                />
+                                Descargar PDF
+                              </>
+                            )}
+
+                          </button>
 
                         </div>
+
                       </div>
 
-                      {/* TOTAL + ACCIONES */}
+                      {/* INFORMACIÓN EXTRA */}
 
-                      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+                      <div className="mt-4 flex flex-wrap gap-2">
 
-                        <div className="mr-2">
-
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-[#927E70]">
-                            Total
-                          </p>
-
-                          <p className="text-xl font-bold text-[#7F0303]">
-                            {formatearPrecio(total)}
-                          </p>
-
-                        </div>
-
-                        {/* VER FACTURA */}
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            verFactura(venta)
-                          }
-                          className="flex items-center gap-2 rounded-xl border border-[#7F0303] bg-white px-4 py-2.5 text-xs font-bold text-[#7F0303] transition hover:bg-[#7F0303] hover:text-white"
-                        >
-                          <Eye size={16} />
-                          Ver factura
-                        </button>
-
-                        {/* DESCARGAR PDF */}
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            descargarPDF(venta)
-                          }
-                          className="flex items-center gap-2 rounded-xl bg-[#7F0303] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#5F0202]"
-                        >
-                          <Download size={16} />
-                          Descargar PDF
-                        </button>
-
-                      </div>
-                    </div>
-
-                    {/* INFORMACIÓN EXTRA */}
-
-                    <div className="mt-4 flex flex-wrap gap-2">
-
-                      <span className="rounded-full bg-[#D4AF37]/20 px-3 py-1 text-xs font-bold text-[#7F0303]">
-                        Venta registrada
-                      </span>
-
-                      {idVenta && (
-                        <span className="rounded-full bg-[#EFE8DF] px-3 py-1 text-xs font-semibold text-[#765E52]">
-                          ID: {idVenta}
+                        <span className="rounded-full bg-[#D4AF37]/20 px-3 py-1 text-xs font-bold text-[#7F0303]">
+                          {venta.estado ||
+                            "Venta registrada"}
                         </span>
-                      )}
+
+                        {idVenta && (
+                          <span className="rounded-full bg-[#EFE8DF] px-3 py-1 text-xs font-semibold text-[#765E52]">
+                            ID: {idVenta}
+                          </span>
+                        )}
+
+                        <span className="rounded-full bg-[#EFE8DF] px-3 py-1 text-xs font-semibold text-[#765E52]">
+                          Productos:{" "}
+                          {(venta.detalles ||
+                            []
+                          ).reduce(
+                            (
+                              cantidad,
+                              detalle
+                            ) =>
+                              cantidad +
+                              Number(
+                                detalle.cantidad ||
+                                  0
+                              ),
+                            0
+                          )}
+                        </span>
+
+                      </div>
+
+                      {/* DETALLES */}
+
+                      {venta.detalles &&
+                        venta.detalles.length >
+                          0 && (
+                          <div className="mt-4 rounded-2xl border border-[#D8BA98] bg-white p-4">
+
+                            <p className="mb-3 text-xs font-bold uppercase tracking-wider text-[#927E70]">
+                              Productos de la venta
+                            </p>
+
+                            <div className="space-y-2">
+
+                              {venta.detalles.map(
+                                (
+                                  detalle,
+                                  detalleIndex
+                                ) => (
+                                  <div
+                                    key={
+                                      detalleIndex
+                                    }
+                                    className="flex flex-wrap items-center justify-between gap-2 border-b border-[#EFE8DF] pb-2 last:border-0 last:pb-0"
+                                  >
+
+                                    <div>
+
+                                      <p className="text-sm font-semibold text-[#3D1717]">
+                                        {detalle.producto ||
+                                          "Producto"}
+                                      </p>
+
+                                      <p className="text-xs text-[#927E70]">
+                                        Cantidad:{" "}
+                                        {
+                                          detalle.cantidad
+                                        }
+                                        {" · "}
+                                        Valor unitario:{" "}
+                                        {formatearPrecio(
+                                          detalle.precio_unitario
+                                        )}
+                                      </p>
+
+                                    </div>
+
+                                    <p className="text-sm font-bold text-[#7F0303]">
+                                      {formatearPrecio(
+                                        detalle.subtotal
+                                      )}
+                                    </p>
+
+                                  </div>
+                                )
+                              )}
+
+                            </div>
+
+                          </div>
+                        )}
 
                     </div>
+                  );
+                }
+              )}
 
-                  </div>
-                );
-              })}
             </div>
           )}
+
         </section>
+
       </div>
     </main>
   );

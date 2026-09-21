@@ -8,6 +8,7 @@ import {
   X,
   UserRound,
   Users,
+  MessageCircle,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
@@ -34,21 +35,31 @@ export default function EstructuraPanel({
       ["/admin/usuarios", "Cuentas", Users],
       ["/admin/productos", "Productos", Boxes],
       ["/admin/ventas", "Ventas", FileText],
+      ["/admin/pqr", "PQR", MessageCircle],
     ],
 
     empleado: [
-      ["/empleado", "Operación", LayoutDashboard],
+      ["/empleado", "Dashboard", LayoutDashboard],
       ["/empleado/productos", "Productos", Boxes],
       ["/empleado/ventas", "Ventas", FileText],
+      ["/empleado/pqr", "PQR", MessageCircle],
     ],
 
     cliente: [
       ["/cliente", "Mi espacio", LayoutDashboard],
       ["/productos", "Catálogo", Boxes],
-
-      // VENTAS EXCLUSIVAMENTE PARA EL CLIENTE
       ["/cliente/ventas", "Ventas", FileText],
+      ["/cliente/pqr", "PQR", MessageCircle],
     ],
+  };
+
+  // ============================================================
+  // NAVEGAR A UNA OPCIÓN DEL MENÚ
+  // Cada opción lleva a una página independiente.
+  // ============================================================
+
+  const navegar = (ruta) => {
+    navigate(ruta);
   };
 
   // ============================================================
@@ -64,7 +75,7 @@ export default function EstructuraPanel({
   };
 
   // ============================================================
-  // CERRAR MENÚ MÓVIL AL NAVEGAR
+  // NAVEGACIÓN MÓVIL
   // ============================================================
 
   const navegarMovil = (ruta) => {
@@ -72,105 +83,127 @@ export default function EstructuraPanel({
     setMenuAbierto(false);
   };
 
-  // ============================================================
-  // RETURN
-  // ============================================================
-
   return (
-    <section className="min-h-screen bg-[#EFE8DF] px-3 py-3 sm:px-5 sm:py-5 lg:px-6 lg:py-8">
-      <div className="mx-auto flex max-w-[1600px] gap-4 lg:gap-6">
+    <section className="min-h-screen bg-[#EFE8DF]">
+      <div className="flex min-h-screen w-full">
 
         {/* ======================================================
             MENÚ DESKTOP
         ====================================================== */}
 
-        <aside className="sticky top-6 hidden h-[calc(100vh-3rem)] w-64 shrink-0 flex-col rounded-[28px] bg-[#241415] p-5 text-[#F8F3EA] lg:flex">
+        <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col bg-[#4A0505] text-[#F8F3EA] lg:flex">
 
-          {/* LOGO */}
+          {/* ====================================================
+              LOGO
+          ==================================================== */}
 
-          <div className="border-b border-white/10 pb-5">
-            <p className="font-serif text-2xl font-bold">
+          <div className="flex shrink-0 flex-col items-center border-b border-white/10 px-5 py-6">
+            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white p-2 shadow-lg">
+              <img
+                src="/img/logo.png"
+                alt="MUGI STORE"
+                className="h-full w-full object-contain"
+              />
+            </div>
+
+            <p className="mt-3 font-serif text-xl font-bold tracking-wide">
               MUGI
             </p>
 
-            <p className="text-xs uppercase tracking-[0.25em] text-[#D4AF37]">
+            <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#D4AF37]">
               Panel {rol}
             </p>
           </div>
 
-          {/* NAVEGACIÓN */}
+          {/* ====================================================
+              NAVEGACIÓN
+          ==================================================== */}
 
-          <nav className="mt-8 space-y-2">
+          <nav className="flex-1 px-4 py-5">
+            <div className="space-y-2">
 
-            {enlaces[rol]?.map(
-              ([ruta, texto, Icono]) => (
-                <button
-                  key={ruta}
-                  type="button"
-                  onClick={() => navigate(ruta)}
-                  className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold transition ${
-                    location.pathname === ruta
-                      ? "bg-[#D4AF37] text-[#241415]"
-                      : "text-white/70 hover:bg-white/10 hover:text-white"
-                  }`}
-                >
-                  <Icono size={18} />
-                  {texto}
-                </button>
-              )
-            )}
+              {enlaces[rol]?.map(
+                ([ruta, texto, Icono]) => {
+                  const activo = location.pathname === ruta;
 
-            {/* IR A INICIO */}
+                  return (
+                    <button
+                      key={`${ruta}-${texto}`}
+                      type="button"
+                      onClick={() => navegar(ruta)}
+                      className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold transition ${
+                        activo
+                          ? "bg-[#D4AF37] text-[#4A0505]"
+                          : "text-white/70 hover:bg-white/10 hover:text-white"
+                      }`}
+                    >
+                      <Icono size={18} />
+                      {texto}
+                    </button>
+                  );
+                }
+              )}
 
-            <button
-              type="button"
-              onClick={() => navigate("/")}
-              className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold text-white/70 transition hover:bg-white/10 hover:text-white"
-            >
-              <Home size={18} />
-              Ir a inicio
-            </button>
+              {/* ==================================================
+                  IR A INICIO
+              ================================================== */}
 
-            {/* EDITAR PERFIL */}
+              <button
+                type="button"
+                onClick={() => navigate("/")}
+                className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold text-white/70 transition hover:bg-white/10 hover:text-white"
+              >
+                <Home size={18} />
+                Ir a inicio
+              </button>
 
-            <button
-              type="button"
-              onClick={() => navigate("/perfil")}
-              className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold transition ${
-                location.pathname === "/perfil"
-                  ? "bg-[#D4AF37] text-[#241415]"
-                  : "text-white/70 hover:bg-white/10 hover:text-white"
-              }`}
-            >
-              <UserRound size={18} />
-              Editar perfil
-            </button>
+              {/* ==================================================
+                  EDITAR PERFIL
+              ================================================== */}
 
+              <button
+                type="button"
+                onClick={() => navigate("/perfil")}
+                className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold transition ${
+                  location.pathname === "/perfil"
+                    ? "bg-[#D4AF37] text-[#4A0505]"
+                    : "text-white/70 hover:bg-white/10 hover:text-white"
+                }`}
+              >
+                <UserRound size={18} />
+                Editar perfil
+              </button>
+
+            </div>
           </nav>
 
-          {/* USUARIO */}
+          {/* ====================================================
+              USUARIO
+          ==================================================== */}
 
-          <div className="mt-auto rounded-2xl border border-[#D4AF37]/20 p-4">
+          <div className="shrink-0 border-t border-white/10 p-4">
+            <div className="rounded-2xl border border-[#D4AF37]/20 p-4">
 
-            <p className="truncate text-sm font-semibold">
-              {usuario?.nombres || titulo}
-            </p>
+              <p className="truncate text-sm font-semibold">
+                {usuario?.nombres || titulo}
+              </p>
 
-            <p className="mt-1 text-xs capitalize text-white/50">
-              {rol}
-            </p>
+              <p className="mt-1 text-xs capitalize text-white/50">
+                {rol}
+              </p>
 
-            {/* CERRAR SESIÓN */}
+              {/* CERRAR SESIÓN */}
 
-            <button
-              type="button"
-              onClick={salir}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-white/70 transition hover:bg-white/10 hover:text-white"
-            >
-              <LogOut size={15} />
-              Cerrar sesión
-            </button>
+              <button
+                type="button"
+                onClick={salir}
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-white/70 transition hover:bg-white/10 hover:text-white"
+              >
+                <LogOut size={15} />
+                Cerrar sesión
+              </button>
 
+            </div>
           </div>
         </aside>
 
@@ -184,21 +217,37 @@ export default function EstructuraPanel({
               MENÚ MÓVIL
           ==================================================== */}
 
-          <div className="sticky top-2 z-40 mb-4 rounded-3xl border border-[#D8BA98] bg-[#F8F3EA]/95 p-3 shadow-sm backdrop-blur lg:hidden sm:mb-5 sm:p-4">
+          <div className="sticky top-0 z-40 mb-4 border-b border-[#D8BA98] bg-[#F8F3EA]/95 p-3 shadow-sm backdrop-blur lg:hidden sm:mb-5 sm:p-4">
 
-            {/* CABECERA MÓVIL */}
+            {/* CABECERA */}
 
             <div className="flex items-center justify-between gap-3">
 
-              <div>
-                <p className="font-serif text-lg font-bold text-[#7F0303]">
-                  MUGI
-                </p>
+              {/* LOGO */}
 
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#927E70]">
-                  Panel {rol}
-                </p>
+              <div className="flex items-center gap-3">
+
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white p-1 shadow-sm">
+                  <img
+                    src="/img/logo.png"
+                    alt="MUGI STORE"
+                    className="h-full w-full object-contain"
+                  />
+                </div>
+
+                <div>
+                  <p className="font-serif text-lg font-bold text-[#7F0303]">
+                    MUGI
+                  </p>
+
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#927E70]">
+                    Panel {rol}
+                  </p>
+                </div>
+
               </div>
+
+              {/* BOTONES */}
 
               <div className="flex items-center gap-2">
 
@@ -213,7 +262,7 @@ export default function EstructuraPanel({
                   <Home size={19} />
                 </button>
 
-                {/* BOTÓN MENÚ */}
+                {/* MENÚ */}
 
                 <button
                   type="button"
@@ -246,12 +295,10 @@ export default function EstructuraPanel({
             {menuAbierto && (
               <nav className="mt-4 grid gap-2 border-t border-[#D8BA98]/60 pt-4">
 
-                {/* ENLACES SEGÚN ROL */}
-
                 {enlaces[rol]?.map(
                   ([ruta, texto, Icono]) => (
                     <button
-                      key={ruta}
+                      key={`${ruta}-${texto}`}
                       type="button"
                       onClick={() =>
                         navegarMovil(ruta)
@@ -315,10 +362,13 @@ export default function EstructuraPanel({
           </div>
 
           {/* ====================================================
-              CONTENIDO DE CADA PANEL
+              CONTENIDO DE CADA PÁGINA
+              Cada página controla su propio scroll.
           ==================================================== */}
 
-          {children}
+          <div className="min-w-0">
+            {children}
+          </div>
 
         </div>
       </div>

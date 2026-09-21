@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+
 import { useNavigate } from "react-router-dom";
+
 import {
   ArrowLeft,
   CalendarDays,
@@ -10,6 +12,7 @@ import {
 } from "lucide-react";
 
 import EstructuraPanel from "../components/EstructuraPanel";
+
 import { useAuth } from "../context/AuthContext";
 
 const API_URL = "http://127.0.0.1:8000";
@@ -21,10 +24,6 @@ export default function ClienteVentas() {
   const [ventas, setVentas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
-
-  // ============================================================
-  // CARGAR COMPRAS DEL CLIENTE
-  // ============================================================
 
   const cargarVentas = async () => {
     if (!token) {
@@ -60,6 +59,7 @@ export default function ClienteVentas() {
       console.error("Error cargando compras:", error);
 
       setVentas([]);
+
       setError(
         error.message || "No se pudieron cargar tus compras."
       );
@@ -68,17 +68,9 @@ export default function ClienteVentas() {
     }
   };
 
-  // ============================================================
-  // CARGAR AL ENTRAR A LA PÁGINA
-  // ============================================================
-
   useEffect(() => {
     cargarVentas();
   }, [token]);
-
-  // ============================================================
-  // FUNCIONES AUXILIARES
-  // ============================================================
 
   const obtenerIdVenta = (venta) => {
     return venta?.id || venta?.venta_id || venta?._id;
@@ -98,16 +90,6 @@ export default function ClienteVentas() {
       venta?.fecha_venta ||
       venta?.created_at ||
       venta?.createdAt
-    );
-  };
-
-  const obtenerTotal = (venta) => {
-    return (
-      venta?.total ??
-      venta?.total_venta ??
-      venta?.monto_total ??
-      venta?.total_factura ??
-      0
     );
   };
 
@@ -131,10 +113,6 @@ export default function ClienteVentas() {
     }
   };
 
-  // ============================================================
-  // VER FACTURA
-  // ============================================================
-
   const verFactura = (venta) => {
     const ventaId = obtenerIdVenta(venta);
 
@@ -146,21 +124,14 @@ export default function ClienteVentas() {
     navigate(`/factura/${ventaId}`);
   };
 
-  // ============================================================
-  // RETURN
-  // ============================================================
-
   return (
     <EstructuraPanel rol="cliente" titulo="Cliente">
       <section className="min-h-screen bg-[#EFE8DF] px-4 py-8 sm:px-6 md:px-8 md:py-12">
         <div className="mx-auto max-w-6xl">
 
-          {/* ====================================================
-              CABECERA
-          ==================================================== */}
+          {/* CABECERA */}
 
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#D4AF37]">
                 Historial
@@ -183,22 +154,15 @@ export default function ClienteVentas() {
               <ArrowLeft size={17} />
               Volver al panel
             </button>
-
           </div>
 
-          {/* ====================================================
-              CONTENEDOR PRINCIPAL
-          ==================================================== */}
+          {/* CONTENEDOR PRINCIPAL */}
 
           <div className="overflow-hidden rounded-[2.5rem] border border-[#D4AF37]/25 bg-[#F8F3EA] shadow-md">
 
-            {/* ENCABEZADO */}
-
             <div className="flex flex-col justify-between gap-4 border-b border-[#D8BA98]/50 px-7 py-6 sm:flex-row sm:items-center md:px-9">
-
               <div>
                 <div className="flex items-center gap-3">
-
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#7F0303] text-white">
                     <FileText size={23} />
                   </div>
@@ -212,7 +176,6 @@ export default function ClienteVentas() {
                       Historial de compras
                     </h2>
                   </div>
-
                 </div>
               </div>
 
@@ -229,25 +192,16 @@ export default function ClienteVentas() {
 
                 Actualizar
               </button>
-
             </div>
-
-            {/* CONTENIDO */}
 
             <div className="p-7 md:p-9">
 
-              {/* ==================================================
-                  CARGANDO
-              ================================================== */}
+              {/* CARGANDO */}
 
               {cargando && (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
-
                   <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#7F0303] text-white">
-                    <RefreshCw
-                      size={28}
-                      className="animate-spin"
-                    />
+                    <RefreshCw size={28} className="animate-spin" />
                   </div>
 
                   <h3 className="mt-5 font-serif text-2xl font-bold text-[#7F0303]">
@@ -257,17 +211,13 @@ export default function ClienteVentas() {
                   <p className="mt-2 text-sm text-[#927E70]">
                     Estamos consultando tu historial de compras.
                   </p>
-
                 </div>
               )}
 
-              {/* ==================================================
-                  ERROR
-              ================================================== */}
+              {/* ERROR */}
 
               {!cargando && error && (
                 <div className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center">
-
                   <FileText
                     size={38}
                     className="mx-auto mb-4 text-red-700"
@@ -289,19 +239,15 @@ export default function ClienteVentas() {
                     <RefreshCw size={16} />
                     Intentar nuevamente
                   </button>
-
                 </div>
               )}
 
-              {/* ==================================================
-                  SIN COMPRAS
-              ================================================== */}
+              {/* SIN COMPRAS */}
 
               {!cargando &&
                 !error &&
                 ventas.length === 0 && (
                   <div className="rounded-2xl border border-[#D8BA98] bg-white/50 p-10 text-center">
-
                     <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#7F0303] text-white">
                       <Package size={28} />
                     </div>
@@ -323,46 +269,53 @@ export default function ClienteVentas() {
                       <Package size={17} />
                       Ver productos
                     </button>
-
                   </div>
                 )}
 
-              {/* ==================================================
-                  LISTA DE COMPRAS
-              ================================================== */}
+              {/* LISTA DE COMPRAS */}
 
               {!cargando &&
                 !error &&
                 ventas.length > 0 && (
                   <div className="space-y-4">
-
                     {ventas.map((venta) => {
                       const ventaId = obtenerIdVenta(venta);
                       const numeroFactura =
                         obtenerNumeroFactura(venta);
                       const fecha = obtenerFecha(venta);
-                      const total = obtenerTotal(venta);
+
+                      const subtotal = Number(
+                        venta?.subtotal ?? 0
+                      );
+
+                      const descuento = Number(
+                        venta?.descuento ?? 0
+                      );
+
+                      const impuesto = Number(
+                        venta?.impuesto ?? 0
+                      );
+
+                      const total = Number(
+                        venta?.total ?? 0
+                      );
 
                       return (
                         <div
                           key={ventaId}
                           className="rounded-2xl border border-[#D8BA98] bg-white/60 p-5 transition-all duration-300 hover:border-[#D4AF37] hover:bg-white/80 hover:shadow-md"
                         >
-
                           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
 
                             {/* INFORMACIÓN DE LA COMPRA */}
 
                             <div className="min-w-0">
-
                               <div className="flex items-center gap-4">
-
                                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#7F0303] text-white">
                                   <FileText size={20} />
                                 </div>
 
                                 <div className="min-w-0">
-
                                   <p className="text-[10px] font-bold uppercase tracking-wider text-[#927E70]">
                                     Número de factura
                                   </p>
@@ -370,13 +323,10 @@ export default function ClienteVentas() {
                                   <p className="truncate font-mono text-base font-bold text-[#7F0303]">
                                     {numeroFactura}
                                   </p>
-
                                 </div>
-
                               </div>
 
                               <div className="mt-4 flex flex-col gap-2 text-sm text-[#765E52] sm:flex-row sm:flex-wrap sm:gap-x-6">
-
                                 <span className="inline-flex items-center gap-2">
                                   <CalendarDays size={15} />
                                   {formatearFecha(fecha)}
@@ -388,25 +338,57 @@ export default function ClienteVentas() {
                                     {venta.estado || "Registrada"}
                                   </strong>
                                 </span>
-
                               </div>
-
                             </div>
 
-                            {/* TOTAL Y FACTURA */}
+                            {/* RESUMEN Y FACTURA */}
 
-                            <div className="flex flex-col gap-3 border-t border-[#D8BA98]/50 pt-4 sm:flex-row sm:items-center sm:justify-between lg:border-t-0 lg:pt-0">
+                            <div className="flex flex-col gap-4 border-t border-[#D8BA98]/50 pt-4 sm:flex-row sm:items-end sm:justify-between lg:border-t-0 lg:pt-0">
 
                               <div className="lg:text-right">
+                                <div className="space-y-1">
 
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-[#927E70]">
-                                  Total de la compra
-                                </p>
+                                  <div className="flex items-center justify-between gap-6 text-sm">
+                                    <span className="text-[#927E70]">
+                                      Subtotal
+                                    </span>
 
-                                <p className="font-serif text-2xl font-bold text-[#7F0303]">
-                                  {formatearPrecio(total)}
-                                </p>
+                                    <span className="font-semibold text-[#765E52]">
+                                      {formatearPrecio(subtotal)}
+                                    </span>
+                                  </div>
 
+                                  <div className="flex items-center justify-between gap-6 text-sm">
+                                    <span className="text-[#927E70]">
+                                      Descuento
+                                    </span>
+
+                                    <span className="font-semibold text-[#765E52]">
+                                      {formatearPrecio(descuento)}
+                                    </span>
+                                  </div>
+
+                                  <div className="flex items-center justify-between gap-6 text-sm">
+                                    <span className="text-[#927E70]">
+                                      Impuesto
+                                    </span>
+
+                                    <span className="font-semibold text-[#765E52]">
+                                      {formatearPrecio(impuesto)}
+                                    </span>
+                                  </div>
+
+                                  <div className="mt-2 border-t border-[#D8BA98]/50 pt-2">
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#927E70]">
+                                      Total
+                                    </p>
+
+                                    <p className="font-serif text-2xl font-bold text-[#7F0303]">
+                                      {formatearPrecio(total)}
+                                    </p>
+                                  </div>
+
+                                </div>
                               </div>
 
                               <button
@@ -419,19 +401,14 @@ export default function ClienteVentas() {
                               </button>
 
                             </div>
-
                           </div>
-
                         </div>
                       );
                     })}
-
                   </div>
                 )}
-
             </div>
           </div>
-
         </div>
       </section>
     </EstructuraPanel>

@@ -10,12 +10,10 @@ from ..auth import (
     obtener_datos_token_recuperacion,
     verify_password,
 )
-
 from ..correo import enviar_correo_recuperacion
 from ..database import get_db
 from ..dependencies import obtener_usuario_actual
 from ..models import Usuario
-
 from ..schemas import (
     LoginRequest,
     LoginResponse,
@@ -35,7 +33,6 @@ router = APIRouter(
 # ==========================================================
 # LOGIN
 # ==========================================================
-
 @router.post(
     "/login",
     response_model=LoginResponse
@@ -45,26 +42,117 @@ def iniciar_sesion(
     db: Session = Depends(get_db)
 ):
 
+    email = credenciales.email.strip().lower()
+
+    print("====================================")
+    print("PRUEBA DE LOGIN")
+    print("EMAIL RECIBIDO:", email)
+    print(
+        "LONGITUD PASSWORD:",
+        len(credenciales.password)
+    )
+
     usuario = db.query(Usuario).filter(
-        Usuario.email == credenciales.email
+        Usuario.email == email
     ).first()
 
-    if not usuario or not verify_password(
-        credenciales.password,
-        usuario.password
-    ):
+    print(
+        "USUARIO ENCONTRADO:",
+        usuario is not None
+    )
+
+    if not usuario:
+        print("RESULTADO: USUARIO NO ENCONTRADO")
+        print("====================================")
 
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="El correo o la contraseña son incorrectos"
         )
 
+    print("ID USUARIO:", usuario.id)
+    print("ROL ID:", usuario.rol_id)
+    print("ESTADO:", usuario.estado)
+
+    # ------------------------------------------------------
+    # DIAGNÓSTICO DEL HASH
+    # ------------------------------------------------------
+    print(
+        "HASH EXISTE:",
+        bool(usuario.password)
+    )
+
+    print(
+        "LONGITUD HASH:",
+        len(usuario.password)
+    )
+
+    # ------------------------------------------------------
+    # VERIFICAR CONTRASEÑA
+    # ------------------------------------------------------
+    try:
+        contraseña_correcta = verify_password(
+            credenciales.password,
+            usuario.password
+        )
+
+        print(
+            "VERIFICACIÓN BCRYPT:",
+            contraseña_correcta
+        )
+
+    except Exception as error:
+
+        print(
+            "ERROR EN VERIFY_PASSWORD:",
+            repr(error)
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error al verificar la contraseña"
+        )
+
+    # ------------------------------------------------------
+    # CONTRASEÑA INCORRECTA
+    # ------------------------------------------------------
+    if not contraseña_correcta:
+
+        print(
+            "RESULTADO: CONTRASEÑA INCORRECTA"
+        )
+
+        print("====================================")
+
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="El correo o la contraseña son incorrectos"
+        )
+
+    # ------------------------------------------------------
+    # USUARIO INACTIVO
+    # ------------------------------------------------------
     if not usuario.estado:
+
+        print(
+            "RESULTADO: USUARIO INACTIVO"
+        )
+
+        print("====================================")
 
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="El usuario se encuentra inactivo"
         )
+
+    # ------------------------------------------------------
+    # LOGIN CORRECTO
+    # ------------------------------------------------------
+    print(
+        "RESULTADO: LOGIN CORRECTO"
+    )
+
+    print("====================================")
 
     return {
         "success": True,
@@ -79,7 +167,6 @@ def iniciar_sesion(
 # ==========================================================
 # RECUPERAR CONTRASEÑA
 # ==========================================================
-
 @router.post("/recuperar")
 async def solicitar_recuperacion(
     datos: RecuperarContrasenaRequest,
@@ -93,12 +180,14 @@ async def solicitar_recuperacion(
     # ------------------------------------------------------
     # BUSCAR USUARIO
     # ------------------------------------------------------
-
     usuario = db.query(Usuario).filter(
         Usuario.email == datos.email
     ).first()
 
-    print("USUARIO ENCONTRADO:", usuario)
+    print(
+        "USUARIO ENCONTRADO:",
+        usuario
+    )
 
     mensaje = (
         "Si el correo está registrado, "
@@ -108,7 +197,6 @@ async def solicitar_recuperacion(
     # ------------------------------------------------------
     # USUARIO NO ENCONTRADO O INACTIVO
     # ------------------------------------------------------
-
     if not usuario or not usuario.estado:
 
         print(
@@ -126,21 +214,21 @@ async def solicitar_recuperacion(
     # ------------------------------------------------------
     # USUARIO ENCONTRADO
     # ------------------------------------------------------
-
     print("USUARIO CORRECTO")
     print("ID DEL USUARIO:", usuario.id)
 
     # ------------------------------------------------------
     # CREAR TOKEN DE RECUPERACIÓN
     # ------------------------------------------------------
-
     try:
 
         token = crear_token_recuperacion(
             usuario.id
         )
 
-        print("TOKEN GENERADO CORRECTAMENTE")
+        print(
+            "TOKEN GENERADO CORRECTAMENTE"
+        )
 
     except Exception as error:
 
@@ -160,7 +248,6 @@ async def solicitar_recuperacion(
     # ------------------------------------------------------
     # TOKEN SOLO PARA PRUEBAS LOCALES
     # ------------------------------------------------------
-
     print("====================================")
     print("TOKEN DE RECUPERACIÓN:")
     print(token)
@@ -169,7 +256,6 @@ async def solicitar_recuperacion(
     # ------------------------------------------------------
     # OBTENER URL DEL FRONTEND
     # ------------------------------------------------------
-
     frontend_url = os.getenv(
         "FRONTEND_URL",
         "http://localhost:5173"
@@ -178,25 +264,33 @@ async def solicitar_recuperacion(
     # ------------------------------------------------------
     # CREAR ENLACE
     # ------------------------------------------------------
-
     enlace = (
         f"{frontend_url}"
         f"/restablecer-contrasena"
         f"?token={token}"
     )
 
-    print("ENLACE DE RECUPERACIÓN:")
+    print(
+        "ENLACE DE RECUPERACIÓN:"
+    )
+
     print(enlace)
+
     print("====================================")
 
     # ------------------------------------------------------
     # ENVIAR CORREO
     # ------------------------------------------------------
-
     try:
 
-        print("INICIANDO ENVÍO DEL CORREO")
-        print("DESTINO:", datos.email)
+        print(
+            "INICIANDO ENVÍO DEL CORREO"
+        )
+
+        print(
+            "DESTINO:",
+            datos.email
+        )
 
         await enviar_correo_recuperacion(
             datos.email,
@@ -210,18 +304,22 @@ async def solicitar_recuperacion(
     except Exception as error:
 
         print("====================================")
+
         print(
             "ERROR ENVIANDO CORREO "
             "DE RECUPERACIÓN"
         )
+
         print(
             "TIPO:",
             type(error).__name__
         )
+
         print(
             "ERROR:",
             repr(error)
         )
+
         print("====================================")
 
         raise HTTPException(
@@ -235,7 +333,6 @@ async def solicitar_recuperacion(
     # ------------------------------------------------------
     # FINALIZAR
     # ------------------------------------------------------
-
     print(
         "SOLICITUD DE RECUPERACIÓN TERMINADA"
     )
@@ -252,7 +349,6 @@ async def solicitar_recuperacion(
 # ==========================================================
 # RESTABLECER CONTRASEÑA
 # ==========================================================
-
 @router.post("/restablecer")
 def restablecer_contrasena(
     datos: RestablecerContrasenaRequest,
@@ -262,7 +358,6 @@ def restablecer_contrasena(
     # ------------------------------------------------------
     # VALIDAR TOKEN
     # ------------------------------------------------------
-
     try:
 
         datos_token = (
@@ -281,7 +376,6 @@ def restablecer_contrasena(
     # ------------------------------------------------------
     # OBTENER ID DEL USUARIO
     # ------------------------------------------------------
-
     try:
 
         usuario_id = int(
@@ -298,7 +392,6 @@ def restablecer_contrasena(
     # ------------------------------------------------------
     # BUSCAR USUARIO
     # ------------------------------------------------------
-
     usuario = db.query(Usuario).filter(
         Usuario.id == usuario_id
     ).first()
@@ -313,10 +406,27 @@ def restablecer_contrasena(
     # ------------------------------------------------------
     # ACTUALIZAR CONTRASEÑA
     # ------------------------------------------------------
-
-    usuario.password = hash_password(
+    nueva_password_hash = hash_password(
         datos.nueva_password
     )
+
+    print("====================================")
+    print("RESTABLECIMIENTO DE CONTRASEÑA")
+    print("ID USUARIO:", usuario.id)
+
+    print(
+        "LONGITUD NUEVA PASSWORD:",
+        len(datos.nueva_password)
+    )
+
+    print(
+        "LONGITUD HASH GENERADO:",
+        len(nueva_password_hash)
+    )
+
+    print("====================================")
+
+    usuario.password = nueva_password_hash
 
     db.commit()
     db.refresh(usuario)
@@ -330,7 +440,6 @@ def restablecer_contrasena(
 # ==========================================================
 # OBTENER PERFIL ACTUAL
 # ==========================================================
-
 @router.get(
     "/me",
     response_model=UsuarioResponse
@@ -347,7 +456,6 @@ def obtener_perfil_actual(
 # ==========================================================
 # ACTUALIZAR PERFIL
 # ==========================================================
-
 @router.put(
     "/me",
     response_model=UsuarioResponse
@@ -363,7 +471,6 @@ def actualizar_perfil(
     # ------------------------------------------------------
     # COMPROBAR CORREO
     # ------------------------------------------------------
-
     otro_usuario = db.query(Usuario).filter(
         Usuario.email == datos.email,
         Usuario.id != usuario.id
@@ -379,7 +486,6 @@ def actualizar_perfil(
     # ------------------------------------------------------
     # OBTENER CAMPOS
     # ------------------------------------------------------
-
     valores = datos.model_dump(
         exclude_unset=True
     )
@@ -387,7 +493,6 @@ def actualizar_perfil(
     # ------------------------------------------------------
     # ENCRIPTAR CONTRASEÑA
     # ------------------------------------------------------
-
     if valores.get("password"):
 
         valores["password"] = hash_password(
@@ -404,7 +509,6 @@ def actualizar_perfil(
     # ------------------------------------------------------
     # ACTUALIZAR USUARIO
     # ------------------------------------------------------
-
     for campo, valor in valores.items():
 
         setattr(

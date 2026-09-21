@@ -8,11 +8,17 @@ import Productos from "./pages/Productos";
 import QuienesSomos from "./pages/QuienesSomos";
 import Contacto from "./pages/Contacto";
 import Login from "./pages/login";
+import Chatbot from "./components/Chatbot";
+
 
 import Admin from "./pages/Admin";
 import Empleado from "./pages/Empleado";
 import EmpleadoProductos from "./pages/EmpleadoProductos";
+import EmpleadoPQR from "./pages/EmpleadoPQR";
+
 import Cliente from "./pages/Cliente";
+import ClienteVentas from "./pages/ClienteVentas";
+import ClientePQR from "./pages/ClientePQR";
 
 import Perfil from "./pages/Perfil";
 import GestionComercial from "./pages/GestionComercial";
@@ -20,9 +26,8 @@ import Factura from "./pages/Factura";
 
 import WhatsAppButton from "./components/WhatsAppButton";
 import RutaProtegida from "./components/RutaProtegida";
-
 import RestablecerContrasena from "./pages/RestablecerContrasena";
-import ClienteVentas from "./pages/ClienteVentas";
+
 
 function App() {
   const location = useLocation();
@@ -34,6 +39,8 @@ function App() {
   const ocultarLayout =
     location.pathname === "/login" ||
     location.pathname === "/perfil" ||
+    location.pathname === "/restablecer-contrasena" ||
+    location.pathname === "/recuperar-contrasena" ||
     location.pathname.startsWith("/admin") ||
     location.pathname.startsWith("/cliente") ||
     location.pathname.startsWith("/empleado");
@@ -45,6 +52,7 @@ function App() {
       {!ocultarLayout && <Header />}
 
       <main className="min-h-screen">
+
         <Routes>
 
           {/* ====================================================
@@ -71,6 +79,7 @@ function App() {
             element={<Contacto />}
           />
 
+
           {/* ====================================================
               LOGIN
           ==================================================== */}
@@ -79,6 +88,7 @@ function App() {
             path="/login"
             element={<Login />}
           />
+
 
           {/* ====================================================
               RECUPERACIÓN DE CONTRASEÑA
@@ -89,8 +99,10 @@ function App() {
             element={<RestablecerContrasena />}
           />
 
+
           {/* ====================================================
               PERFIL
+
               Roles:
               1 = Administrador
               2 = Cliente
@@ -106,6 +118,7 @@ function App() {
             }
           />
 
+
           {/* ====================================================
               PANEL ADMINISTRADOR
           ==================================================== */}
@@ -118,6 +131,7 @@ function App() {
               </RutaProtegida>
             }
           />
+
 
           {/* ====================================================
               ADMINISTRADOR - USUARIOS
@@ -132,6 +146,7 @@ function App() {
             }
           />
 
+
           {/* ====================================================
               ADMINISTRADOR - PRODUCTOS
           ==================================================== */}
@@ -145,21 +160,40 @@ function App() {
             }
           />
 
+
           {/* ====================================================
               ADMINISTRADOR - VENTAS
-              
-              SOLO ADMINISTRADOR
-              GestionComercial se reutiliza para las ventas.
           ==================================================== */}
 
           <Route
             path="/admin/ventas"
             element={
-              <RutaProtegida rolesPermitidos={[1]}>
-                <GestionComercial />
+              <RutaProtegida rolPermitido={1}>
+                <Admin />
               </RutaProtegida>
             }
           />
+
+
+          {/* ====================================================
+              ADMINISTRADOR - PQR
+
+              El administrador puede:
+              - Consultar PQR
+              - Ver datos del cliente
+              - Responder PQR
+              - Cambiar estado
+          ==================================================== */}
+
+          <Route
+            path="/admin/pqr"
+            element={
+              <RutaProtegida rolPermitido={1}>
+                <EmpleadoPQR />
+              </RutaProtegida>
+            }
+          />
+
 
           {/* ====================================================
               EMPLEADO
@@ -174,6 +208,7 @@ function App() {
             }
           />
 
+
           {/* ====================================================
               EMPLEADO - PRODUCTOS
           ==================================================== */}
@@ -187,11 +222,9 @@ function App() {
             }
           />
 
+
           {/* ====================================================
               EMPLEADO - VENTAS
-              
-              SOLO EMPLEADO
-              Utiliza el mismo GestionComercial que Admin.
           ==================================================== */}
 
           <Route
@@ -203,14 +236,27 @@ function App() {
             }
           />
 
+
+          {/* ====================================================
+              EMPLEADO - PQR
+
+              Puede consultar y responder PQR.
+          ==================================================== */}
+
+          <Route
+            path="/empleado/pqr"
+            element={
+              <RutaProtegida rolPermitido={3}>
+                <EmpleadoPQR />
+              </RutaProtegida>
+            }
+          />
+
+
           {/* ====================================================
               FACTURA
-              
-              Se mantiene disponible para los tres roles porque
-              puede formar parte del flujo de compra/facturación.
-              
-              Después de revisar Factura.jsx podemos restringirla
-              si realmente corresponde.
+
+              Disponible para los tres roles
           ==================================================== */}
 
           <Route
@@ -222,11 +268,9 @@ function App() {
             }
           />
 
+
           {/* ====================================================
               PANEL CLIENTE
-              
-              IMPORTANTE:
-              NO existe /cliente/ventas.
           ==================================================== */}
 
           <Route
@@ -238,22 +282,42 @@ function App() {
             }
           />
 
-          {/* ====================================================
-    CLIENTE - VENTAS
-    SOLO CLIENTE
-    Muestra únicamente las ventas del cliente autenticado.
-==================================================== */}
 
-            <Route
-              path="/cliente/ventas"
-              element={
-                <RutaProtegida rolPermitido={2}>
-                  <ClienteVentas />
-                </RutaProtegida>
-              }
-            />
+          {/* ====================================================
+              CLIENTE - VENTAS
+
+              Muestra únicamente las ventas del cliente
+              autenticado.
+          ==================================================== */}
+
+          <Route
+            path="/cliente/ventas"
+            element={
+              <RutaProtegida rolPermitido={2}>
+                <ClienteVentas />
+              </RutaProtegida>
+            }
+          />
+
+
+          {/* ====================================================
+              CLIENTE - PQR
+
+              El cliente puede crear y consultar
+              únicamente sus propias PQR.
+          ==================================================== */}
+
+          <Route
+            path="/cliente/pqr"
+            element={
+              <RutaProtegida rolPermitido={2}>
+                <ClientePQR />
+              </RutaProtegida>
+            }
+          />
 
         </Routes>
+
       </main>
 
       {/* FOOTER PÚBLICO */}
@@ -261,6 +325,9 @@ function App() {
 
       {/* WHATSAPP */}
       <WhatsAppButton />
+
+          <Chatbot />
+
 
     </div>
   );

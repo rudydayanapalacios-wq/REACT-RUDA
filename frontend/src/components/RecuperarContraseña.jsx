@@ -55,20 +55,58 @@ function RecuperarContrasena() {
   // ==========================================================
   // ENVIAR FORMULARIO
   // ==========================================================
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-  const handleSubmit = (e) => {
+  if (!validarCorreo(correo)) {
+    return;
+  }
 
-    e.preventDefault();
+  setError("");
+  setMensaje("");
 
-    if (validarCorreo(correo)) {
+  try {
+    const respuesta = await fetch(
+      `${"http://127.0.0.1:8000"}/auth/recuperar`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: correo.trim().toLowerCase(),
+        }),
+      }
+    );
 
-      setMensaje(
-        `Hemos enviado instrucciones de recuperación a ${correo}`
+    const datos = await respuesta.json();
+
+    console.log("=================================");
+    console.log("RESPUESTA RECUPERACIÓN");
+    console.log(datos);
+    console.log("=================================");
+
+    if (!respuesta.ok) {
+      setError(
+        datos.detail ||
+          datos.message ||
+          "No se pudo enviar el correo de recuperación."
       );
-
+      return;
     }
-  };
 
+    setMensaje(
+      datos.message ||
+        `Hemos enviado instrucciones de recuperación a ${correo}`
+    );
+  } catch (error) {
+    console.error("Error en recuperación:", error);
+
+    setError(
+      "No se pudo conectar con el servidor. Verifica que el backend esté ejecutándose."
+    );
+  }
+};
   // ==========================================================
   // VOLVER AL LOGIN
   // ==========================================================

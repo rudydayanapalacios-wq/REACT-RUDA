@@ -115,7 +115,7 @@ def actualizar_producto(
 
 @router.delete(
     "/{producto_id}",
-    status_code=status.HTTP_204_NO_CONTENT
+    status_code=status.HTTP_200_OK
 )
 def eliminar_producto(
     producto_id: int,
@@ -134,7 +134,13 @@ def eliminar_producto(
             detail="Producto no encontrado"
         )
 
-    db.delete(producto)
-    db.commit()
+    # Eliminación lógica para conservar el historial de ventas
+    producto.estado = False
 
-    return None
+    db.commit()
+    db.refresh(producto)
+
+    return {
+        "success": True,
+        "message": "Producto eliminado correctamente"
+    }

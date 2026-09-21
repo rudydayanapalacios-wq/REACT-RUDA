@@ -1,8 +1,5 @@
-// ============================================================
-// MENÚ DEL CARRITO
-// ============================================================
-
 import { useState } from "react";
+
 import {
   Minus,
   Plus,
@@ -36,22 +33,13 @@ function CarritoMenu({ cerrarCarrito }) {
   const [mensajeError, setMensajeError] = useState("");
   const [compraExitosa, setCompraExitosa] = useState(null);
 
-  // ============================================================
-  // FORMATEAR PRECIO
-  // ============================================================
-
   const formatearPrecio = (precio) => {
-    return `$${Number(precio).toLocaleString("es-CO")}`;
+    return `$${Number(precio || 0).toLocaleString("es-CO")}`;
   };
-
-  // ============================================================
-  // REALIZAR COMPRA
-  // ============================================================
 
   const realizarCompra = async () => {
     setMensajeError("");
 
-    // Verificar sesión
     if (!autenticado || !token) {
       setMensajeError(
         "Debes iniciar sesión para realizar una compra."
@@ -59,7 +47,6 @@ function CarritoMenu({ cerrarCarrito }) {
       return;
     }
 
-    // Verificar carrito
     if (carrito.length === 0) {
       setMensajeError("Tu carrito está vacío.");
       return;
@@ -68,18 +55,10 @@ function CarritoMenu({ cerrarCarrito }) {
     try {
       setComprando(true);
 
-      // ========================================================
-      // PREPARAR DETALLES PARA FASTAPI
-      // ========================================================
-
       const detalles = carrito.map((producto) => ({
         producto_id: Number(producto.id),
         cantidad: Number(producto.cantidad),
       }));
-
-      // ========================================================
-      // ENVIAR VENTA AL BACKEND
-      // ========================================================
 
       const respuesta = await fetch(`${API_URL}/ventas/`, {
         method: "POST",
@@ -94,13 +73,8 @@ function CarritoMenu({ cerrarCarrito }) {
 
       const datos = await respuesta.json().catch(() => null);
 
-      // ========================================================
-      // ERROR DEL BACKEND
-      // ========================================================
-
       if (!respuesta.ok) {
-        let mensaje =
-          "No se pudo completar la compra.";
+        let mensaje = "No se pudo completar la compra.";
 
         if (typeof datos?.detail === "string") {
           mensaje = datos.detail;
@@ -115,19 +89,23 @@ function CarritoMenu({ cerrarCarrito }) {
         throw new Error(mensaje);
       }
 
-      // ========================================================
-      // COMPRA EXITOSA
-      // ========================================================
-
       setCompraExitosa({
-        numeroFactura: datos?.numero_factura || "Sin número",
-        total: Number(datos?.total || totalCarrito),
+        numeroFactura:
+          datos?.numero_factura || "Sin número",
+        subtotal: Number(datos?.subtotal || 0),
+        descuento: Number(datos?.descuento || 0),
+        impuesto: Number(datos?.impuesto || 0),
+        total: Number(
+          datos?.total || totalCarrito
+        ),
       });
 
-      // Vaciar solamente después de que el backend confirme
       vaciarCarrito();
     } catch (error) {
-      console.error("Error realizando la compra:", error);
+      console.error(
+        "Error realizando la compra:",
+        error
+      );
 
       setMensajeError(
         error.message ||
@@ -138,14 +116,15 @@ function CarritoMenu({ cerrarCarrito }) {
     }
   };
 
-  // ============================================================
-  // COMPRA EXITOSA
-  // ============================================================
+  /* ============================================================
+     COMPRA EXITOSA
+  ============================================================ */
 
   if (compraExitosa) {
     return (
       <>
         {/* FONDO */}
+
         <button
           type="button"
           aria-label="Cerrar carrito"
@@ -161,6 +140,7 @@ function CarritoMenu({ cerrarCarrito }) {
         />
 
         {/* MENÚ */}
+
         <aside
           className="
             fixed
@@ -179,6 +159,7 @@ function CarritoMenu({ cerrarCarrito }) {
           "
         >
           {/* ENCABEZADO */}
+
           <div
             className="
               flex
@@ -232,6 +213,7 @@ function CarritoMenu({ cerrarCarrito }) {
           </div>
 
           {/* CONTENIDO */}
+
           <div
             className="
               flex
@@ -287,6 +269,7 @@ function CarritoMenu({ cerrarCarrito }) {
             </p>
 
             {/* FACTURA */}
+
             <div
               className="
                 mt-6
@@ -324,12 +307,90 @@ function CarritoMenu({ cerrarCarrito }) {
                 {compraExitosa.numeroFactura}
               </p>
 
-              <div className="mt-4 border-t border-[#D4AF37]/20 pt-4">
+              <div className="mt-4 space-y-3 border-t border-[#D4AF37]/20 pt-4">
                 <div className="flex items-center justify-between">
                   <span
                     className="
                       text-sm
                       font-medium
+                      text-[#927E70]
+                      dark:text-[#C8B9B5]
+                    "
+                  >
+                    Subtotal
+                  </span>
+
+                  <span
+                    className="
+                      text-sm
+                      font-semibold
+                      text-[#7F0303]
+                      dark:text-[#F8F3EA]
+                    "
+                  >
+                    {formatearPrecio(
+                      compraExitosa.subtotal
+                    )}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span
+                    className="
+                      text-sm
+                      font-medium
+                      text-[#927E70]
+                      dark:text-[#C8B9B5]
+                    "
+                  >
+                    Descuento
+                  </span>
+
+                  <span
+                    className="
+                      text-sm
+                      font-semibold
+                      text-[#7F0303]
+                      dark:text-[#F8F3EA]
+                    "
+                  >
+                    {formatearPrecio(
+                      compraExitosa.descuento
+                    )}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span
+                    className="
+                      text-sm
+                      font-medium
+                      text-[#927E70]
+                      dark:text-[#C8B9B5]
+                    "
+                  >
+                    Impuesto
+                  </span>
+
+                  <span
+                    className="
+                      text-sm
+                      font-semibold
+                      text-[#7F0303]
+                      dark:text-[#F8F3EA]
+                    "
+                  >
+                    {formatearPrecio(
+                      compraExitosa.impuesto
+                    )}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between border-t border-[#D4AF37]/20 pt-3">
+                  <span
+                    className="
+                      text-sm
+                      font-bold
                       text-[#927E70]
                       dark:text-[#C8B9B5]
                     "
@@ -345,51 +406,52 @@ function CarritoMenu({ cerrarCarrito }) {
                       dark:text-[#D4AF37]
                     "
                   >
-                    {formatearPrecio(compraExitosa.total)}
+                    {formatearPrecio(
+                      compraExitosa.total
+                    )}
                   </span>
                 </div>
               </div>
-            </div>
 
-            <button
-              type="button"
-              onClick={cerrarCarrito}
-              className="
-                mt-7
-                w-full
-                rounded-full
-                bg-[#7F0303]
-                px-6
-                py-3.5
-                text-sm
-                font-bold
-                text-white
-                transition-all
-                duration-300
-                hover:-translate-y-0.5
-                hover:bg-[#D4AF37]
-                hover:shadow-lg
-                dark:bg-[#8F1D24]
-                dark:hover:bg-[#D4AF37]
-                dark:hover:text-[#160B0C]
-              "
-            >
-              Continuar comprando
-            </button>
+              <button
+                type="button"
+                onClick={cerrarCarrito}
+                className="
+                  mt-7
+                  w-full
+                  rounded-full
+                  bg-[#7F0303]
+                  px-6
+                  py-3.5
+                  text-sm
+                  font-bold
+                  text-white
+                  transition-all
+                  duration-300
+                  hover:-translate-y-0.5
+                  hover:bg-[#D4AF37]
+                  hover:shadow-lg
+                  dark:bg-[#8F1D24]
+                  dark:hover:bg-[#D4AF37]
+                  dark:hover:text-[#160B0C]
+                "
+              >
+                Continuar comprando
+              </button>
+            </div>
           </div>
         </aside>
       </>
     );
   }
 
-  // ============================================================
-  // CARRITO VACÍO
-  // ============================================================
+  /* ============================================================
+     CARRITO VACÍO
+  ============================================================ */
 
   if (carrito.length === 0) {
     return (
       <>
-        {/* FONDO */}
         <button
           type="button"
           aria-label="Cerrar carrito"
@@ -421,7 +483,6 @@ function CarritoMenu({ cerrarCarrito }) {
             dark:bg-[#241415]
           "
         >
-          {/* ENCABEZADO */}
           <div
             className="
               flex
@@ -474,7 +535,6 @@ function CarritoMenu({ cerrarCarrito }) {
             </button>
           </div>
 
-          {/* CONTENIDO VACÍO */}
           <div
             className="
               flex
@@ -543,15 +603,13 @@ function CarritoMenu({ cerrarCarrito }) {
     );
   }
 
-  // ============================================================
-  // CARRITO CON PRODUCTOS
-  // ============================================================
+  /* ============================================================
+     CARRITO CON PRODUCTOS
+  ============================================================ */
 
   return (
     <>
-      {/* ====================================================== */}
       {/* FONDO */}
-      {/* ====================================================== */}
 
       <button
         type="button"
@@ -567,9 +625,7 @@ function CarritoMenu({ cerrarCarrito }) {
         "
       />
 
-      {/* ====================================================== */}
       {/* MENÚ */}
-      {/* ====================================================== */}
 
       <aside
         className="
@@ -588,9 +644,7 @@ function CarritoMenu({ cerrarCarrito }) {
           dark:bg-[#241415]
         "
       >
-        {/* ==================================================== */}
         {/* ENCABEZADO */}
-        {/* ==================================================== */}
 
         <div
           className="
@@ -659,9 +713,7 @@ function CarritoMenu({ cerrarCarrito }) {
           </button>
         </div>
 
-        {/* ==================================================== */}
         {/* PRODUCTOS */}
-        {/* ==================================================== */}
 
         <div
           className="
@@ -685,9 +737,6 @@ function CarritoMenu({ cerrarCarrito }) {
                 "
               >
                 <div className="flex gap-4">
-
-                  {/* IMAGEN */}
-
                   <img
                     src={producto.imagen}
                     alt={producto.nombre}
@@ -700,10 +749,7 @@ function CarritoMenu({ cerrarCarrito }) {
                     "
                   />
 
-                  {/* INFORMACIÓN */}
-
                   <div className="min-w-0 flex-1">
-
                     <div className="flex items-start justify-between gap-2">
                       <h3
                         className="
@@ -750,7 +796,6 @@ function CarritoMenu({ cerrarCarrito }) {
                     {/* CANTIDAD */}
 
                     <div className="mt-3 flex items-center justify-between">
-
                       <div
                         className="
                           flex
@@ -852,9 +897,7 @@ function CarritoMenu({ cerrarCarrito }) {
           </div>
         </div>
 
-        {/* ==================================================== */}
         {/* RESUMEN */}
-        {/* ==================================================== */}
 
         <div
           className="

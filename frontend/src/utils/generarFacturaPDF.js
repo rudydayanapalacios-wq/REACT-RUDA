@@ -2,6 +2,23 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 // ============================================================
+// CARGAR IMAGEN
+// ============================================================
+
+const cargarImagen = (src) => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(
+      new Error(`No se pudo cargar la imagen: ${src}`)
+    );
+
+    img.src = src;
+  });
+};
+
+// ============================================================
 // NORMALIZADORES DE DATOS
 // ============================================================
 
@@ -87,11 +104,46 @@ const obtenerEmailCliente = (venta) => {
   return (
     venta?.email ||
     venta?.cliente_email ||
-    (typeof cliente === "object"
-      ? cliente?.email
-      : "") ||
+    (typeof cliente === "object" ? cliente?.email : "") ||
     ""
   );
+};
+
+const obtenerDocumentoCliente = (venta) => {
+  const cliente = venta?.cliente;
+
+  if (!cliente || typeof cliente !== "object") {
+    return "";
+  }
+
+  if (
+    cliente.tipo_documento &&
+    cliente.numero_documento
+  ) {
+    return `${cliente.tipo_documento}: ${cliente.numero_documento}`;
+  }
+
+  return cliente.numero_documento || "";
+};
+
+const obtenerTelefonoCliente = (venta) => {
+  const cliente = venta?.cliente;
+
+  if (!cliente || typeof cliente !== "object") {
+    return "";
+  }
+
+  return cliente.telefono || "";
+};
+
+const obtenerDireccionCliente = (venta) => {
+  const cliente = venta?.cliente;
+
+  if (!cliente || typeof cliente !== "object") {
+    return "";
+  }
+
+  return cliente.direccion || "";
 };
 
 const obtenerNombreProducto = (detalle, index) => {
@@ -163,9 +215,7 @@ const obtenerSubtotal = (detalle) => {
 // ============================================================
 
 const formatearPrecio = (valor) => {
-  return `$${Number(valor || 0).toLocaleString(
-    "es-CO"
-  )}`;
+  return `$${Number(valor || 0).toLocaleString("es-CO")}`;
 };
 
 const formatearFecha = (fecha) => {
@@ -209,7 +259,7 @@ const formatearHora = (fecha) => {
 // GENERAR PDF
 // ============================================================
 
-export function generarFacturaPDF(venta) {
+export async function generarFacturaPDF(venta) {
   console.log(
     "GENERANDO PDF DE LA VENTA:",
     venta
@@ -246,6 +296,30 @@ export function generarFacturaPDF(venta) {
     const emailCliente =
       obtenerEmailCliente(venta);
 
+    const documentoCliente =
+      obtenerDocumentoCliente(venta);
+
+    const telefonoCliente =
+      obtenerTelefonoCliente(venta);
+
+    const direccionCliente =
+      obtenerDireccionCliente(venta);
+
+    // ========================================================
+    // CARGAR LOGO
+    // ========================================================
+
+    let logo = null;
+
+    try {
+      logo = await cargarImagen("/img/logo.png");
+    } catch (errorLogo) {
+      console.warn(
+        "No se pudo cargar el logo de MUGI:",
+        errorLogo
+      );
+    }
+
     // ========================================================
     // CREAR DOCUMENTO
     // ========================================================
@@ -263,60 +337,109 @@ export function generarFacturaPDF(venta) {
       doc.internal.pageSize.getHeight();
 
     // ========================================================
+    // COLORES MUGI
+    // ========================================================
+
+    const VINO = [127, 3, 3];
+    const VINO_OSCURO = [74, 5, 5];
+    const DORADO = [212, 175, 55];
+    const CREMA = [248, 243, 234];
+    const BEIGE = [239, 232, 223];
+    const TEXTO = [61, 23, 23];
+    const GRIS = [118, 94, 82];
+
+    // ========================================================
     // ENCABEZADO
     // ========================================================
 
-    doc.setFillColor(
-      127,
-      3,
-      3
-    );
+    doc.setFillColor(...VINO_OSCURO);
 
     doc.rect(
       0,
       0,
       anchoPagina,
-      42,
+      48,
       "F"
     );
 
-    doc.setTextColor(
-      255,
-      255,
-      255
+    // Línea dorada inferior
+
+    doc.setFillColor(...DORADO);
+
+    doc.rect(
+      0,
+      46,
+      anchoPagina,
+      2,
+      "F"
     );
+
+    // ========================================================
+    // LOGO
+    // ========================================================
+
+    if (logo) {
+      doc.addImage(
+        logo,
+        "PNG",
+        18,
+        8,
+        27,
+        27
+      );
+    }
+
+    // ========================================================
+    // NOMBRE DE LA TIENDA
+    // ========================================================
+
+    doc.setTextColor(255, 255, 255);
 
     doc.setFont(
       "helvetica",
       "bold"
     );
 
-    doc.setFontSize(23);
+    doc.setFontSize(22);
 
     doc.text(
       "MUGI STORE",
-      20,
-      18
+      52,
+      20
     );
+
+    doc.setTextColor(...DORADO);
 
     doc.setFontSize(9);
 
-    doc.setTextColor(
-      212,
-      175,
-      55
+    doc.text(
+      "JOYERÍA Y ACCESORIOS",
+      52,
+      28
     );
+
+    doc.setTextColor(255, 255, 255);
+
+    doc.setFont(
+      "helvetica",
+      "normal"
+    );
+
+    doc.setFontSize(8);
 
     doc.text(
-      "COMPROBANTE DE VENTA",
-      20,
-      26
+      "Comprobante oficial de compra",
+      52,
+      35
     );
 
-    doc.setTextColor(
-      255,
-      255,
-      255
+    // ========================================================
+    // FACTURA
+    // ========================================================
+
+    doc.setFont(
+      "helvetica",
+      "bold"
     );
 
     doc.setFontSize(9);
@@ -324,18 +447,33 @@ export function generarFacturaPDF(venta) {
     doc.text(
       "FACTURA",
       anchoPagina - 20,
-      14,
+      15,
       {
         align: "right",
       }
     );
 
-    doc.setFontSize(14);
+    doc.setTextColor(...DORADO);
+
+    doc.setFontSize(13);
 
     doc.text(
       String(numeroFactura),
       anchoPagina - 20,
-      23,
+      24,
+      {
+        align: "right",
+      }
+    );
+
+    doc.setTextColor(255, 255, 255);
+
+    doc.setFontSize(8);
+
+    doc.text(
+      "ESTADO: REGISTRADA",
+      anchoPagina - 20,
+      33,
       {
         align: "right",
       }
@@ -345,11 +483,9 @@ export function generarFacturaPDF(venta) {
     // INFORMACIÓN DEL CLIENTE
     // ========================================================
 
-    doc.setTextColor(
-      61,
-      23,
-      23
-    );
+    let posicionCliente = 62;
+
+    doc.setTextColor(...TEXTO);
 
     doc.setFont(
       "helvetica",
@@ -361,7 +497,20 @@ export function generarFacturaPDF(venta) {
     doc.text(
       "INFORMACIÓN DEL CLIENTE",
       20,
-      57
+      posicionCliente
+    );
+
+    // Línea decorativa
+
+    doc.setDrawColor(...DORADO);
+
+    doc.setLineWidth(0.6);
+
+    doc.line(
+      20,
+      posicionCliente + 3,
+      75,
+      posicionCliente + 3
     );
 
     doc.setFont(
@@ -369,29 +518,88 @@ export function generarFacturaPDF(venta) {
       "normal"
     );
 
-    doc.setFontSize(10);
+    doc.setFontSize(9);
+
+    let yCliente =
+      posicionCliente + 13;
 
     doc.text(
       `Cliente: ${String(nombreCliente)}`,
       20,
-      66
+      yCliente
     );
 
-    if (emailCliente) {
+    if (documentoCliente) {
+      yCliente += 6;
+
       doc.text(
-        `Correo: ${String(emailCliente)}`,
+        `Documento: ${documentoCliente}`,
         20,
-        73
+        yCliente
       );
     }
 
+    if (emailCliente) {
+      yCliente += 6;
+
+      doc.text(
+        `Correo: ${String(emailCliente)}`,
+        20,
+        yCliente
+      );
+    }
+
+    if (telefonoCliente) {
+      yCliente += 6;
+
+      doc.text(
+        `Teléfono: ${telefonoCliente}`,
+        20,
+        yCliente
+      );
+    }
+
+    if (direccionCliente) {
+      yCliente += 6;
+
+      doc.text(
+        `Dirección: ${direccionCliente}`,
+        20,
+        yCliente
+      );
+    }
+
+    // ========================================================
+    // INFORMACIÓN DE LA VENTA
+    // ========================================================
+
+    const xVenta =
+      anchoPagina - 75;
+
+    doc.setFont(
+      "helvetica",
+      "bold"
+    );
+
+    doc.setFontSize(9);
+
+    doc.text(
+      "DATOS DE LA COMPRA",
+      xVenta,
+      posicionCliente
+    );
+
+    doc.setFont(
+      "helvetica",
+      "normal"
+    );
+
+    doc.setFontSize(9);
+
     doc.text(
       `Fecha: ${formatearFecha(fecha)}`,
-      anchoPagina - 20,
-      66,
-      {
-        align: "right",
-      }
+      xVenta,
+      posicionCliente + 13
     );
 
     const hora =
@@ -400,16 +608,19 @@ export function generarFacturaPDF(venta) {
     if (hora) {
       doc.text(
         `Hora: ${hora}`,
-        anchoPagina - 20,
-        73,
-        {
-          align: "right",
-        }
+        xVenta,
+        posicionCliente + 20
       );
     }
 
+    doc.text(
+      "Método: Compra registrada",
+      xVenta,
+      posicionCliente + 27
+    );
+
     // ========================================================
-    // TABLA
+    // TABLA DE PRODUCTOS
     // ========================================================
 
     const filas = detalles.map(
@@ -421,19 +632,13 @@ export function generarFacturaPDF(venta) {
           );
 
         const cantidad =
-          obtenerCantidad(
-            detalle
-          );
+          obtenerCantidad(detalle);
 
         const precio =
-          obtenerPrecio(
-            detalle
-          );
+          obtenerPrecio(detalle);
 
         const subtotal =
-          obtenerSubtotal(
-            detalle
-          );
+          obtenerSubtotal(detalle);
 
         return [
           String(nombreProducto),
@@ -444,8 +649,11 @@ export function generarFacturaPDF(venta) {
       }
     );
 
+    const inicioTabla =
+      Math.max(yCliente + 15, 105);
+
     autoTable(doc, {
-      startY: 86,
+      startY: inicioTabla,
 
       head: [
         [
@@ -470,40 +678,29 @@ export function generarFacturaPDF(venta) {
 
       theme: "grid",
 
+      styles: {
+        font: "helvetica",
+        fontSize: 9,
+        cellPadding: 4,
+        lineColor: [220, 210, 200],
+        lineWidth: 0.3,
+      },
+
       headStyles: {
-        fillColor: [
-          127,
-          3,
-          3,
-        ],
-
-        textColor: [
-          255,
-          255,
-          255,
-        ],
-
+        fillColor: VINO,
+        textColor: [255, 255, 255],
         fontStyle: "bold",
-
         halign: "center",
+        valign: "middle",
       },
 
       bodyStyles: {
-        textColor: [
-          61,
-          23,
-          23,
-        ],
-
-        fontSize: 9,
+        textColor: TEXTO,
+        valign: "middle",
       },
 
       alternateRowStyles: {
-        fillColor: [
-          248,
-          243,
-          234,
-        ],
+        fillColor: CREMA,
       },
 
       columnStyles: {
@@ -518,12 +715,12 @@ export function generarFacturaPDF(venta) {
 
         2: {
           halign: "right",
-          cellWidth: 35,
+          cellWidth: 38,
         },
 
         3: {
           halign: "right",
-          cellWidth: 35,
+          cellWidth: 38,
         },
       },
 
@@ -538,19 +735,18 @@ export function generarFacturaPDF(venta) {
     // ========================================================
 
     const posicionTabla =
-      doc.lastAutoTable?.finalY ||
-      100;
+      doc.lastAutoTable?.finalY || 120;
 
     let posicionFinal =
       posicionTabla + 15;
 
     // ========================================================
-    // SI NO HAY ESPACIO, NUEVA PÁGINA
+    // NUEVA PÁGINA SI ES NECESARIO
     // ========================================================
 
     if (
       posicionFinal >
-      altoPagina - 55
+      altoPagina - 65
     ) {
       doc.addPage();
 
@@ -558,75 +754,27 @@ export function generarFacturaPDF(venta) {
     }
 
     // ========================================================
-    // TOTAL
+    // RESUMEN DE PAGO
     // ========================================================
 
-    doc.setFillColor(
-      239,
-      232,
-      223
+    const subtotalVenta = detalles.reduce(
+      (acumulado, detalle) =>
+        acumulado +
+        obtenerSubtotal(detalle),
+      0
     );
 
-    doc.roundedRect(
-      anchoPagina - 85,
-      posicionFinal,
-      65,
-      28,
-      3,
-      3,
-      "F"
-    );
+    const descuento =
+      Number(venta?.descuento || 0);
 
-    doc.setTextColor(
-      118,
-      94,
-      82
-    );
-
-    doc.setFont(
-      "helvetica",
-      "normal"
-    );
-
-    doc.setFontSize(9);
-
-    doc.text(
-      "TOTAL",
-      anchoPagina - 75,
-      posicionFinal + 9
-    );
-
-    doc.setTextColor(
-      127,
-      3,
-      3
-    );
-
-    doc.setFont(
-      "helvetica",
-      "bold"
-    );
-
-    doc.setFontSize(17);
-
-    doc.text(
-      formatearPrecio(total),
-      anchoPagina - 25,
-      posicionFinal + 20,
-      {
-        align: "right",
-      }
-    );
+    const impuesto =
+      Number(venta?.impuesto || 0);
 
     // ========================================================
     // ESTADO
     // ========================================================
 
-    doc.setTextColor(
-      61,
-      23,
-      23
-    );
+    doc.setTextColor(...TEXTO);
 
     doc.setFont(
       "helvetica",
@@ -636,9 +784,9 @@ export function generarFacturaPDF(venta) {
     doc.setFontSize(10);
 
     doc.text(
-      "Estado de la compra",
+      "ESTADO DE LA COMPRA",
       20,
-      posicionFinal + 10
+      posicionFinal + 8
     );
 
     doc.setFont(
@@ -646,39 +794,160 @@ export function generarFacturaPDF(venta) {
       "normal"
     );
 
-    doc.setTextColor(
-      80,
-      110,
-      70
-    );
+    doc.setTextColor(80, 110, 70);
+
+    doc.setFontSize(9);
 
     doc.text(
       "Compra registrada correctamente",
       20,
-      posicionFinal + 18
+      posicionFinal + 16
+    );
+
+    // ========================================================
+    // CAJA DE TOTALES
+    // ========================================================
+
+    const cajaX =
+      anchoPagina - 85;
+
+    const cajaY =
+      posicionFinal;
+
+    doc.setFillColor(...BEIGE);
+
+    doc.roundedRect(
+      cajaX,
+      cajaY,
+      65,
+      43,
+      3,
+      3,
+      "F"
+    );
+
+    doc.setTextColor(...GRIS);
+
+    doc.setFont(
+      "helvetica",
+      "normal"
+    );
+
+    doc.setFontSize(8);
+
+    doc.text(
+      "Subtotal",
+      cajaX + 8,
+      cajaY + 9
+    );
+
+    doc.text(
+      formatearPrecio(subtotalVenta),
+      cajaX + 57,
+      cajaY + 9,
+      {
+        align: "right",
+      }
+    );
+
+    doc.text(
+      "Descuento",
+      cajaX + 8,
+      cajaY + 17
+    );
+
+    doc.text(
+      formatearPrecio(descuento),
+      cajaX + 57,
+      cajaY + 17,
+      {
+        align: "right",
+      }
+    );
+
+    doc.text(
+      "Impuestos",
+      cajaX + 8,
+      cajaY + 25
+    );
+
+    doc.text(
+      formatearPrecio(impuesto),
+      cajaX + 57,
+      cajaY + 25,
+      {
+        align: "right",
+      }
+    );
+
+    doc.setDrawColor(
+      200,
+      190,
+      180
+    );
+
+    doc.line(
+      cajaX + 8,
+      cajaY + 29,
+      cajaX + 57,
+      cajaY + 29
+    );
+
+    doc.setTextColor(...VINO);
+
+    doc.setFont(
+      "helvetica",
+      "bold"
+    );
+
+    doc.setFontSize(12);
+
+    doc.text(
+      "TOTAL",
+      cajaX + 8,
+      cajaY + 38
+    );
+
+    doc.text(
+      formatearPrecio(total),
+      cajaX + 57,
+      cajaY + 38,
+      {
+        align: "right",
+      }
     );
 
     // ========================================================
     // PIE DE PÁGINA
     // ========================================================
 
-    doc.setDrawColor(
-      216,
-      186,
-      152
-    );
+    doc.setDrawColor(...DORADO);
+
+    doc.setLineWidth(0.5);
 
     doc.line(
       20,
-      altoPagina - 30,
+      altoPagina - 31,
       anchoPagina - 20,
-      altoPagina - 30
+      altoPagina - 31
     );
 
-    doc.setTextColor(
-      118,
-      94,
-      82
+    doc.setTextColor(...GRIS);
+
+    doc.setFont(
+      "helvetica",
+      "bold"
+    );
+
+    doc.setFontSize(9);
+
+    doc.text(
+      "MUGI STORE",
+      anchoPagina / 2,
+      altoPagina - 22,
+      {
+        align: "center",
+      }
     );
 
     doc.setFont(
@@ -686,23 +955,23 @@ export function generarFacturaPDF(venta) {
       "normal"
     );
 
-    doc.setFontSize(9);
+    doc.setFontSize(8);
 
     doc.text(
-      "Gracias por comprar en MUGI STORE.",
+      "Gracias por comprar con nosotros.",
       anchoPagina / 2,
-      altoPagina - 21,
+      altoPagina - 16,
       {
         align: "center",
       }
     );
 
-    doc.setFontSize(8);
+    doc.setFontSize(7);
 
     doc.text(
       "Comprobante generado por el sistema MUGI STORE",
       anchoPagina / 2,
-      altoPagina - 14,
+      altoPagina - 10,
       {
         align: "center",
       }
@@ -720,9 +989,7 @@ export function generarFacturaPDF(venta) {
       nombreArchivo
     );
 
-    doc.save(
-      nombreArchivo
-    );
+    doc.save(nombreArchivo);
 
     console.log(
       "PDF GENERADO CORRECTAMENTE"

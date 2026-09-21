@@ -13,6 +13,9 @@ import {
   CalendarDays,
   Eye,
   RefreshCw,
+  ShoppingBag,
+  CircleDollarSign,
+  MessageCircle,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
@@ -26,58 +29,27 @@ function Cliente() {
   const [cargandoVentas, setCargandoVentas] = useState(true);
   const [errorVentas, setErrorVentas] = useState("");
 
-  const nombre = usuario?.nombres || usuario?.nombre || "Cliente";
-  const apellido = usuario?.apellidos || "";
-  const correo = usuario?.email || "No disponible";
-
   // ============================================================
-  // CARGAR MIS COMPRAS
+  // PQR
+  // Solo se utilizan para los indicadores del resumen.
+  // El formulario y el historial completo están en ClientePQR.
   // ============================================================
 
-  useEffect(() => {
-    const cargarVentas = async () => {
-      if (!token) {
-        setVentas([]);
-        setCargandoVentas(false);
-        setErrorVentas("No hay una sesión activa.");
-        return;
-      }
+  const [pqr, setPqr] = useState([]);
+  const [cargandoPqr, setCargandoPqr] = useState(true);
+  const [errorPqr, setErrorPqr] = useState("");
 
-      try {
-        setCargandoVentas(true);
-        setErrorVentas("");
+  const nombre =
+    usuario?.nombres ||
+    usuario?.nombre ||
+    "Cliente";
 
-        const respuesta = await fetch(`${API_URL}/ventas/`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+  const apellido =
+    usuario?.apellidos || "";
 
-        const datos = await respuesta.json();
-
-        console.log("MIS VENTAS:", datos);
-
-        if (!respuesta.ok) {
-          throw new Error(
-            datos.detail || "No se pudieron cargar tus compras."
-          );
-        }
-
-        setVentas(Array.isArray(datos) ? datos : []);
-      } catch (error) {
-        console.error("Error cargando mis compras:", error);
-        setVentas([]);
-        setErrorVentas(
-          error.message || "No se pudieron cargar tus compras."
-        );
-      } finally {
-        setCargandoVentas(false);
-      }
-    };
-
-    cargarVentas();
-  }, [token]);
+  const correo =
+    usuario?.email ||
+    "No disponible";
 
   // ============================================================
   // FORMATEAR PRECIO
@@ -112,7 +84,11 @@ function Cliente() {
   // ============================================================
 
   const obtenerIdVenta = (venta) => {
-    return venta?.id || venta?.venta_id || venta?._id;
+    return (
+      venta?.id ||
+      venta?.venta_id ||
+      venta?._id
+    );
   };
 
   const obtenerNumeroFactura = (venta) => {
@@ -132,25 +108,210 @@ function Cliente() {
     );
   };
 
-  const obtenerTotal = (venta) => {
-    return (
-      venta?.total ??
-      venta?.total_venta ??
-      venta?.monto_total ??
-      venta?.total_factura ??
-      0
-    );
-  };
+  // ============================================================
+  // VENTAS DEL CLIENTE AUTENTICADO
+  // ============================================================
+
+  const ventasDelCliente = ventas.filter(
+    (venta) =>
+      Number(venta?.usuario_id) ===
+      Number(usuario?.id)
+  );
+
+  // ============================================================
+  // INDICADORES DEL DASHBOARD DE CLIENTE - EST12
+  // ============================================================
+
+  const totalComprado = ventasDelCliente.reduce(
+    (total, venta) =>
+      total + (Number(venta?.total) || 0),
+    0
+  );
+
+  const ultimaCompra =
+    ventasDelCliente.length > 0
+      ? ventasDelCliente
+          .slice()
+          .sort((a, b) => {
+            const fechaA = new Date(
+              obtenerFecha(a)
+            ).getTime();
+
+            const fechaB = new Date(
+              obtenerFecha(b)
+            ).getTime();
+
+            return fechaB - fechaA;
+          })[0]
+      : null;
+
+  const fechaUltimaCompra = ultimaCompra
+    ? formatearFecha(
+        obtenerFecha(ultimaCompra)
+      )
+    : "Sin compras";
+
+  // ============================================================
+  // INDICADORES DE PQR
+  // ============================================================
+
+  const pqrRealizadas = pqr.length;
+
+  const pqrRespondidas = pqr.filter(
+    (item) =>
+      item?.respuesta &&
+      String(item.respuesta).trim() !== ""
+  ).length;
+
+  const pqrPendientes =
+    pqrRealizadas - pqrRespondidas;
+
+  // ============================================================
+  // CARGAR MIS COMPRAS
+  // ============================================================
+
+  useEffect(() => {
+    const cargarVentas = async () => {
+      if (!token) {
+        setVentas([]);
+        setCargandoVentas(false);
+        setErrorVentas(
+          "No hay una sesión activa."
+        );
+        return;
+      }
+
+      try {
+        setCargandoVentas(true);
+        setErrorVentas("");
+
+        const respuesta = await fetch(
+          `${API_URL}/ventas/`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const datos = await respuesta.json();
+
+        console.log(
+          "USUARIO ACTUAL:",
+          usuario
+        );
+
+        console.log(
+          "VENTAS RECIBIDAS:",
+          datos
+        );
+
+        if (!respuesta.ok) {
+          throw new Error(
+            datos.detail ||
+              "No se pudieron cargar tus compras."
+          );
+        }
+
+        setVentas(
+          Array.isArray(datos)
+            ? datos
+            : []
+        );
+      } catch (error) {
+        console.error(
+          "Error cargando mis compras:",
+          error
+        );
+
+        setVentas([]);
+
+        setErrorVentas(
+          error.message ||
+            "No se pudieron cargar tus compras."
+        );
+      } finally {
+        setCargandoVentas(false);
+      }
+    };
+
+    cargarVentas();
+  }, [token]);
+
+  // ============================================================
+  // CARGAR MIS PQR
+  // Solo para los indicadores del dashboard.
+  // ============================================================
+
+  useEffect(() => {
+    const cargarPqr = async () => {
+      if (!token) {
+        setPqr([]);
+        setCargandoPqr(false);
+        return;
+      }
+
+      try {
+        setCargandoPqr(true);
+        setErrorPqr("");
+
+        const respuesta = await fetch(
+          `${API_URL}/pqr/`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const datos = await respuesta.json();
+
+        if (!respuesta.ok) {
+          throw new Error(
+            datos.detail ||
+              "No se pudieron cargar tus PQR."
+          );
+        }
+
+        setPqr(
+          Array.isArray(datos)
+            ? datos
+            : []
+        );
+      } catch (error) {
+        console.error(
+          "Error cargando PQR:",
+          error
+        );
+
+        setPqr([]);
+
+        setErrorPqr(
+          error.message ||
+            "No se pudieron cargar tus PQR."
+        );
+      } finally {
+        setCargandoPqr(false);
+      }
+    };
+
+    cargarPqr();
+  }, [token]);
 
   // ============================================================
   // VER FACTURA
   // ============================================================
 
   const verFactura = (venta) => {
-    const ventaId = obtenerIdVenta(venta);
+    const ventaId =
+      obtenerIdVenta(venta);
 
     if (!ventaId) {
-      alert("No se encontró el identificador de la venta.");
+      alert(
+        "No se encontró el identificador de la venta."
+      );
       return;
     }
 
@@ -170,26 +331,49 @@ function Cliente() {
       setCargandoVentas(true);
       setErrorVentas("");
 
-      const respuesta = await fetch(`${API_URL}/ventas/`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const respuesta = await fetch(
+        `${API_URL}/ventas/`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       const datos = await respuesta.json();
 
+      console.log(
+        "USUARIO ACTUAL:",
+        usuario
+      );
+
+      console.log(
+        "VENTAS RECIBIDAS AL ACTUALIZAR:",
+        datos
+      );
+
       if (!respuesta.ok) {
         throw new Error(
-          datos.detail || "No se pudieron cargar tus compras."
+          datos.detail ||
+            "No se pudieron cargar tus compras."
         );
       }
 
-      setVentas(Array.isArray(datos) ? datos : []);
+      setVentas(
+        Array.isArray(datos)
+          ? datos
+          : []
+      );
     } catch (error) {
-      console.error("Error recargando compras:", error);
+      console.error(
+        "Error recargando compras:",
+        error
+      );
+
       setErrorVentas(
-        error.message || "No se pudieron cargar tus compras."
+        error.message ||
+          "No se pudieron cargar tus compras."
       );
     } finally {
       setCargandoVentas(false);
@@ -197,7 +381,10 @@ function Cliente() {
   };
 
   return (
-    <EstructuraPanel rol="cliente" titulo="Cliente">
+    <EstructuraPanel
+      rol="cliente"
+      titulo="Cliente"
+    >
       <section className="min-h-screen bg-[#EFE8DF] px-4 py-8 sm:px-6 md:px-8 md:py-12">
         <div className="mx-auto max-w-6xl">
 
@@ -220,7 +407,6 @@ function Cliente() {
           ============================================================ */}
 
           <div className="relative mb-8 overflow-hidden rounded-[2.5rem] bg-[#7F0303] shadow-xl">
-
             <div className="absolute -right-16 -top-20 h-64 w-64 rounded-full border-[35px] border-[#D4AF37]/10" />
 
             <div className="absolute -bottom-24 -left-16 h-64 w-64 rounded-full border-[35px] border-white/5" />
@@ -229,7 +415,10 @@ function Cliente() {
 
               <div>
                 <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/30 bg-white/5 px-4 py-2">
-                  <Sparkles size={14} className="text-[#D4AF37]" />
+                  <Sparkles
+                    size={14}
+                    className="text-[#D4AF37]"
+                  />
 
                   <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#D4AF37]">
                     MUGI STORE
@@ -241,16 +430,185 @@ function Cliente() {
                 </h1>
 
                 <p className="mt-3 max-w-xl text-sm leading-6 text-white/75 sm:text-base">
-                  Bienvenido a tu espacio personal. Explora nuestra colección,
-                  descubre nuevos productos y disfruta tu experiencia en MUGI STORE.
+                  Bienvenido a tu espacio personal.
+                  Explora nuestra colección, descubre
+                  nuevos productos y disfruta tu experiencia
+                  en MUGI STORE.
                 </p>
               </div>
 
               <div className="flex h-24 w-24 shrink-0 items-center justify-center self-start rounded-full border-4 border-[#D4AF37]/30 bg-[#F8F3EA] text-[#7F0303] shadow-lg md:self-center">
-                <User size={38} strokeWidth={1.8} />
+                <User
+                  size={38}
+                  strokeWidth={1.8}
+                />
               </div>
 
             </div>
+          </div>
+
+          {/* ============================================================
+              INDICADORES DEL DASHBOARD
+          ============================================================ */}
+
+          <div className="mb-8 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+
+            {/* ========================================================
+                COMPRAS REALIZADAS
+            ======================================================== */}
+
+            <div className="rounded-[2rem] border border-[#D4AF37]/25 bg-[#F8F3EA] p-6 shadow-md">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#D4AF37]">
+                    Historial
+                  </p>
+
+                  <h3 className="mt-2 font-serif text-xl font-bold text-[#7F0303]">
+                    Compras realizadas
+                  </h3>
+                </div>
+
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#7F0303] text-white">
+                  <ShoppingBag size={22} />
+                </div>
+              </div>
+
+              <p className="mt-5 font-serif text-4xl font-bold text-[#7F0303]">
+                {ventasDelCliente.length}
+              </p>
+
+              <p className="mt-1 text-sm text-[#927E70]">
+                Compras registradas en tu cuenta
+              </p>
+            </div>
+
+            {/* ========================================================
+                TOTAL COMPRADO
+            ======================================================== */}
+
+            <div className="rounded-[2rem] border border-[#D4AF37]/25 bg-[#F8F3EA] p-6 shadow-md">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#D4AF37]">
+                    Consumo
+                  </p>
+
+                  <h3 className="mt-2 font-serif text-xl font-bold text-[#7F0303]">
+                    Total comprado
+                  </h3>
+                </div>
+
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#D4AF37] text-white">
+                  <CircleDollarSign size={22} />
+                </div>
+              </div>
+
+              <p className="mt-5 font-serif text-3xl font-bold text-[#7F0303]">
+                {formatearPrecio(totalComprado)}
+              </p>
+
+              <p className="mt-1 text-sm text-[#927E70]">
+                Valor acumulado de tus compras
+              </p>
+            </div>
+
+            {/* ========================================================
+                ÚLTIMA COMPRA
+            ======================================================== */}
+
+            <div className="rounded-[2rem] border border-[#D4AF37]/25 bg-[#F8F3EA] p-6 shadow-md">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#D4AF37]">
+                    Actividad
+                  </p>
+
+                  <h3 className="mt-2 font-serif text-xl font-bold text-[#7F0303]">
+                    Última compra
+                  </h3>
+                </div>
+
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#7F0303] text-white">
+                  <CalendarDays size={22} />
+                </div>
+              </div>
+
+              <p className="mt-5 text-lg font-bold text-[#7F0303]">
+                {fechaUltimaCompra}
+              </p>
+
+              <p className="mt-1 text-sm text-[#927E70]">
+                Fecha de tu compra más reciente
+              </p>
+            </div>
+
+            {/* ========================================================
+                PQR
+            ======================================================== */}
+
+            <Link
+              to="/cliente/pqr"
+              className="group rounded-[2rem] border border-[#D4AF37]/25 bg-[#F8F3EA] p-6 shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#D4AF37]">
+                    Atención
+                  </p>
+
+                  <h3 className="mt-2 font-serif text-xl font-bold text-[#7F0303]">
+                    Mis PQR
+                  </h3>
+                </div>
+
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#7F0303] text-white">
+                  <MessageCircle size={22} />
+                </div>
+              </div>
+
+              {cargandoPqr ? (
+                <div className="mt-5">
+                  <p className="font-serif text-3xl font-bold text-[#7F0303]">
+                    ...
+                  </p>
+
+                  <p className="mt-1 text-sm text-[#927E70]">
+                    Consultando solicitudes
+                  </p>
+                </div>
+              ) : errorPqr ? (
+                <div className="mt-5">
+                  <p className="font-serif text-3xl font-bold text-[#7F0303]">
+                    0
+                  </p>
+
+                  <p className="mt-1 text-sm text-[#927E70]">
+                    Ver mis PQR
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-5">
+                  <p className="font-serif text-4xl font-bold text-[#7F0303]">
+                    {pqrRealizadas}
+                  </p>
+
+                  <p className="mt-1 text-sm text-[#927E70]">
+                    {pqrRespondidas} respondidas ·{" "}
+                    {pqrPendientes} pendientes
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-4 flex items-center gap-2 text-sm font-bold text-[#7F0303]">
+                Ver mis PQR
+                <ArrowRight
+                  size={15}
+                  className="transition-transform group-hover:translate-x-1"
+                />
+              </div>
+            </Link>
+
           </div>
 
           {/* ============================================================
@@ -258,7 +616,6 @@ function Cliente() {
           ============================================================ */}
 
           <div className="mb-8">
-
             <div className="mb-5">
               <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#D4AF37]">
                 Explora MUGI
@@ -286,7 +643,6 @@ function Cliente() {
                 <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-[#D4AF37]/5 transition-transform duration-500 group-hover:scale-150" />
 
                 <div className="relative">
-
                   <div className="flex items-center justify-between">
 
                     <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#7F0303] text-white shadow-md">
@@ -308,8 +664,8 @@ function Cliente() {
                   </h3>
 
                   <p className="mt-2 max-w-md text-sm leading-6 text-[#765E52]">
-                    Descubre nuestra colección y encuentra los productos
-                    disponibles para ti.
+                    Descubre nuestra colección y encuentra
+                    los productos disponibles para ti.
                   </p>
 
                   <span className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-[#7F0303]">
@@ -320,7 +676,6 @@ function Cliente() {
                       className="transition-transform group-hover:translate-x-1"
                     />
                   </span>
-
                 </div>
               </Link>
 
@@ -333,7 +688,6 @@ function Cliente() {
                 <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-[#7F0303]/5 transition-transform duration-500 group-hover:scale-150" />
 
                 <div className="relative">
-
                   <div className="flex items-center justify-between">
 
                     <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#D4AF37] text-white shadow-md">
@@ -355,8 +709,8 @@ function Cliente() {
                   </h3>
 
                   <p className="mt-2 max-w-md text-sm leading-6 text-[#765E52]">
-                    Encuentra nuestros canales de atención y comunícate con
-                    MUGI STORE.
+                    Encuentra nuestros canales de atención
+                    y comunícate con MUGI STORE.
                   </p>
 
                   <span className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-[#7F0303]">
@@ -367,7 +721,6 @@ function Cliente() {
                       className="transition-transform group-hover:translate-x-1"
                     />
                   </span>
-
                 </div>
               </Link>
 
@@ -406,8 +759,13 @@ function Cliente() {
                 >
                   <RefreshCw
                     size={16}
-                    className={cargandoVentas ? "animate-spin" : ""}
+                    className={
+                      cargandoVentas
+                        ? "animate-spin"
+                        : ""
+                    }
                   />
+
                   Actualizar
                 </button>
 
@@ -439,38 +797,39 @@ function Cliente() {
 
               {/* ERROR */}
 
-              {!cargandoVentas && errorVentas && (
-                <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
+              {!cargandoVentas &&
+                errorVentas && (
+                  <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
 
-                  <ReceiptText
-                    size={34}
-                    className="mx-auto mb-3 text-red-700"
-                  />
+                    <ReceiptText
+                      size={34}
+                      className="mx-auto mb-3 text-red-700"
+                    />
 
-                  <p className="font-semibold text-red-800">
-                    No se pudieron cargar tus compras
-                  </p>
+                    <p className="font-semibold text-red-800">
+                      No se pudieron cargar tus compras
+                    </p>
 
-                  <p className="mt-2 text-sm text-red-700">
-                    {errorVentas}
-                  </p>
+                    <p className="mt-2 text-sm text-red-700">
+                      {errorVentas}
+                    </p>
 
-                  <button
-                    type="button"
-                    onClick={recargarVentas}
-                    className="mt-4 rounded-xl bg-[#7F0303] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#5F0202]"
-                  >
-                    Intentar nuevamente
-                  </button>
+                    <button
+                      type="button"
+                      onClick={recargarVentas}
+                      className="mt-4 rounded-xl bg-[#7F0303] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#5F0202]"
+                    >
+                      Intentar nuevamente
+                    </button>
 
-                </div>
-              )}
+                  </div>
+                )}
 
               {/* SIN COMPRAS */}
 
               {!cargandoVentas &&
                 !errorVentas &&
-                ventas.length === 0 && (
+                ventasDelCliente.length === 0 && (
                   <div className="rounded-2xl border border-[#D8BA98] bg-white/50 p-10 text-center">
 
                     <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#7F0303] text-white">
@@ -482,8 +841,9 @@ function Cliente() {
                     </h3>
 
                     <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#927E70]">
-                      Cuando realices una compra en MUGI STORE,
-                      aparecerá aquí tu historial de compras.
+                      Cuando realices una compra en
+                      MUGI STORE, aparecerá aquí tu
+                      historial de compras.
                     </p>
 
                     <Link
@@ -501,95 +861,169 @@ function Cliente() {
 
               {!cargandoVentas &&
                 !errorVentas &&
-                ventas.length > 0 && (
+                ventasDelCliente.length > 0 && (
                   <div className="space-y-4">
 
-                    {ventas.map((venta) => {
-                      const ventaId = obtenerIdVenta(venta);
-                      const numeroFactura = obtenerNumeroFactura(venta);
-                      const fecha = obtenerFecha(venta);
-                      const total = obtenerTotal(venta);
+                    {ventasDelCliente.map(
+                      (venta) => {
+                        const ventaId =
+                          obtenerIdVenta(venta);
 
-                      return (
-                        <div
-                          key={ventaId}
-                          className="rounded-2xl border border-[#D8BA98] bg-white/60 p-5 transition-all duration-300 hover:border-[#D4AF37] hover:bg-white/80 hover:shadow-md"
-                        >
+                        const numeroFactura =
+                          obtenerNumeroFactura(
+                            venta
+                          );
 
-                          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                        const fecha =
+                          obtenerFecha(venta);
 
-                            {/* INFORMACIÓN */}
+                        const subtotal =
+                          Number(
+                            venta?.subtotal ?? 0
+                          );
 
-                            <div className="min-w-0">
+                        const descuento =
+                          Number(
+                            venta?.descuento ?? 0
+                          );
 
-                              <div className="flex flex-wrap items-center gap-3">
+                        const impuesto =
+                          Number(
+                            venta?.impuesto ?? 0
+                          );
 
-                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#7F0303] text-white">
-                                  <ReceiptText size={19} />
+                        const total =
+                          Number(
+                            venta?.total ?? 0
+                          );
+
+                        return (
+                          <div
+                            key={ventaId}
+                            className="rounded-2xl border border-[#D8BA98] bg-white/60 p-5 transition-all duration-300 hover:border-[#D4AF37] hover:bg-white/80 hover:shadow-md"
+                          >
+                            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+
+                              {/* INFORMACIÓN */}
+
+                              <div className="min-w-0">
+
+                                <div className="flex flex-wrap items-center gap-3">
+
+                                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#7F0303] text-white">
+                                    <ReceiptText size={19} />
+                                  </div>
+
+                                  <div>
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#927E70]">
+                                      Factura
+                                    </p>
+
+                                    <p className="font-mono text-base font-bold text-[#7F0303]">
+                                      {numeroFactura}
+                                    </p>
+                                  </div>
+
                                 </div>
 
-                                <div>
-                                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#927E70]">
-                                    Factura
-                                  </p>
+                                <div className="mt-4 flex flex-col gap-2 text-sm text-[#765E52] sm:flex-row sm:flex-wrap sm:gap-x-6">
 
-                                  <p className="font-mono text-base font-bold text-[#7F0303]">
-                                    {numeroFactura}
-                                  </p>
+                                  <span className="inline-flex items-center gap-2">
+                                    <CalendarDays size={15} />
+                                    {formatearFecha(fecha)}
+                                  </span>
+
+                                  <span>
+                                    Estado:{" "}
+                                    <strong className="text-[#7F0303]">
+                                      {venta.estado ||
+                                        "Registrada"}
+                                    </strong>
+                                  </span>
+
+                                </div>
+                              </div>
+
+                              {/* RESUMEN Y BOTÓN */}
+
+                              <div className="flex flex-col gap-4 border-t border-[#D8BA98]/50 pt-4 sm:flex-row sm:items-end sm:justify-between lg:border-t-0 lg:pt-0">
+
+                                <div className="lg:text-right">
+
+                                  <div className="space-y-1">
+
+                                    <div className="flex items-center justify-between gap-6 text-sm">
+                                      <span className="text-[#927E70]">
+                                        Subtotal
+                                      </span>
+
+                                      <span className="font-semibold text-[#765E52]">
+                                        {formatearPrecio(
+                                          subtotal
+                                        )}
+                                      </span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-6 text-sm">
+                                      <span className="text-[#927E70]">
+                                        Descuento
+                                      </span>
+
+                                      <span className="font-semibold text-[#765E52]">
+                                        {formatearPrecio(
+                                          descuento
+                                        )}
+                                      </span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-6 text-sm">
+                                      <span className="text-[#927E70]">
+                                        Impuesto
+                                      </span>
+
+                                      <span className="font-semibold text-[#765E52]">
+                                        {formatearPrecio(
+                                          impuesto
+                                        )}
+                                      </span>
+                                    </div>
+
+                                    <div className="mt-2 border-t border-[#D8BA98]/50 pt-2">
+
+                                      <p className="text-[10px] font-bold uppercase tracking-wider text-[#927E70]">
+                                        Total
+                                      </p>
+
+                                      <p className="font-serif text-2xl font-bold text-[#7F0303]">
+                                        {formatearPrecio(
+                                          total
+                                        )}
+                                      </p>
+
+                                    </div>
+
+                                  </div>
                                 </div>
 
-                              </div>
-
-                              <div className="mt-4 flex flex-col gap-2 text-sm text-[#765E52] sm:flex-row sm:flex-wrap sm:gap-x-6">
-
-                                <span className="inline-flex items-center gap-2">
-                                  <CalendarDays size={15} />
-                                  {formatearFecha(fecha)}
-                                </span>
-
-                                <span>
-                                  Estado:{" "}
-                                  <strong className="text-[#7F0303]">
-                                    {venta.estado || "Registrada"}
-                                  </strong>
-                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    verFactura(
+                                      venta
+                                    )
+                                  }
+                                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#7F0303] px-5 py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#5F0202]"
+                                >
+                                  <Eye size={17} />
+                                  Ver factura
+                                </button>
 
                               </div>
-
                             </div>
-
-                            {/* TOTAL Y BOTÓN */}
-
-                            <div className="flex flex-col gap-3 border-t border-[#D8BA98]/50 pt-4 sm:flex-row sm:items-center sm:justify-between lg:border-t-0 lg:pt-0">
-
-                              <div className="lg:text-right">
-
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-[#927E70]">
-                                  Total
-                                </p>
-
-                                <p className="font-serif text-2xl font-bold text-[#7F0303]">
-                                  {formatearPrecio(total)}
-                                </p>
-
-                              </div>
-
-                              <button
-                                type="button"
-                                onClick={() => verFactura(venta)}
-                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#7F0303] px-5 py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#5F0202]"
-                              >
-                                <Eye size={17} />
-                                Ver factura
-                              </button>
-
-                            </div>
-
                           </div>
-
-                        </div>
-                      );
-                    })}
+                        );
+                      }
+                    )}
 
                   </div>
                 )}
@@ -648,7 +1082,6 @@ function Cliente() {
                     </div>
 
                   </div>
-
                 </div>
 
                 {/* CORREO */}
@@ -674,11 +1107,9 @@ function Cliente() {
                     </div>
 
                   </div>
-
                 </div>
 
               </div>
-
             </div>
           </div>
 

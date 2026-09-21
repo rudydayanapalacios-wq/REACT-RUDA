@@ -3,6 +3,7 @@
     "framer-motion": "^13.1.0",
     "lucide-react": "^1.31.0",
     "mongodb": "^7.5.0",
-    "react-parallax-tilt": "^1.7.337"
+    "react-parallax-tilt": "^1.7.337",
+    "recharts": "^3.10.1"
   }
 }

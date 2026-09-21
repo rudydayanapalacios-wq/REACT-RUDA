@@ -31,7 +31,6 @@ function RestablecerContrasena() {
   const [errores, setErrores] = useState({});
   const [mensaje, setMensaje] = useState("");
   const [cargando, setCargando] = useState(false);
-
   const [mostrarPassword, setMostrarPassword] = useState(false);
   const [mostrarConfirmar, setMostrarConfirmar] = useState(false);
 
@@ -60,7 +59,7 @@ function RestablecerContrasena() {
       return "Debe contener al menos un número.";
     }
 
-    if (!/[!@#$%^&*(),.?":{}|<>_\-+=/\\[\]]/.test(password)) {
+    if (!/[!@#$%^&*(),.?":{}|<>_\-+=/[\]\\]/.test(password)) {
       return "Debe contener al menos un carácter especial.";
     }
 
@@ -88,7 +87,7 @@ function RestablecerContrasena() {
     mayuscula: /[A-Z]/.test(formulario.password),
     minuscula: /[a-z]/.test(formulario.password),
     numero: /[0-9]/.test(formulario.password),
-    especial: /[!@#$%^&*(),.?":{}|<>_\-+=/\\[\]]/.test(
+    especial: /[!@#$%^&*(),.?":{}|<>_\-+=/[\]\\]/.test(
       formulario.password
     ),
   };
@@ -159,6 +158,7 @@ function RestablecerContrasena() {
     }
 
     setMensaje("");
+    setErrores({});
 
     if (!validarFormulario()) {
       return;
@@ -167,17 +167,32 @@ function RestablecerContrasena() {
     setCargando(true);
 
     try {
+      // ======================================================
+      // DATOS QUE SE ENVÍAN AL BACKEND
+      // ======================================================
+
+      const datosEnviar = {
+        token: token,
+        nueva_password: formulario.password,
+      };
+
+      console.log("=================================");
+      console.log("SOLICITUD RESTABLECER CONTRASEÑA");
+      console.log("TOKEN PRESENTE:", Boolean(token));
+      console.log(
+        "LONGITUD DE NUEVA CONTRASEÑA:",
+        formulario.password.length
+      );
+      console.log("=================================");
+
       const respuesta = await fetch(
-        "http://127.0.0.1:8000/auth/restablecer",
+        `${"http://127.0.0.1:8000"}/auth/restablecer`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            token: token,
-            nueva_password: formulario.password,
-          }),
+          body: JSON.stringify(datosEnviar),
         }
       );
 
@@ -191,8 +206,14 @@ function RestablecerContrasena() {
 
       console.log("=================================");
       console.log("RESPUESTA RESTABLECER CONTRASEÑA");
-      console.log(datos);
+      console.log("STATUS:", respuesta.status);
+      console.log("OK:", respuesta.ok);
+      console.log("DATOS:", datos);
       console.log("=================================");
+
+      // ======================================================
+      // ERROR DEL BACKEND
+      // ======================================================
 
       if (!respuesta.ok) {
         setErrores({
@@ -204,6 +225,10 @@ function RestablecerContrasena() {
 
         return;
       }
+
+      // ======================================================
+      // RESTABLECIMIENTO CORRECTO
+      // ======================================================
 
       setErrores({});
 
