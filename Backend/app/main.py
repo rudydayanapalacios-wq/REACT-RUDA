@@ -27,18 +27,11 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-   allow_origins=[
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "https://mugi-store-9vrhd1tkq-rudy-05c0.vercel.app",
-    "https://mugi-store-8chua2jh8-rudy-05c0.vercel.app",
-],
+    allow_origin_regex=r"https://mugi-store.*\.vercel\.app|http://localhost:5173|http://127\.0\.0\.1:5173",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
 # ==========================================================
 # RUTAS
 # ==========================================================
