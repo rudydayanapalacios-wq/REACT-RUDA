@@ -277,7 +277,7 @@ export default function RegistroModal({
       // =====================================================
 
       const response = await fetch(
-        `${"http://127.0.0.1:8000"}/usuarios/`,
+        `${import.meta.env.VITE_API_URL}/usuarios/`,
         {
           method: "POST",
           headers: {

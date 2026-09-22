@@ -3,7 +3,7 @@ import { Save, UserRound } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import EstructuraPanel from "../components/EstructuraPanel";
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = import.meta.env.VITE_API_URL;
 
 export default function Perfil() {
   const { usuario, token, iniciarSesion } = useAuth();

@@ -186,7 +186,7 @@ function RestablecerContrasena() {
       console.log("=================================");
 
       const respuesta = await fetch(
-        `${"http://127.0.0.1:8000"}/auth/restablecer`,
+        `${import.meta.env.VITE_API_URL}/auth/restablecer`,
         {
           method: "POST",
           headers: {

@@ -17,7 +17,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { generarFacturaPDF } from "../utils/generarFacturaPDF";
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = import.meta.env.VITE_API_URL;
 
 export default function Factura() {
   const { ventaId } = useParams();

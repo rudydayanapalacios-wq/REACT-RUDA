@@ -67,7 +67,7 @@ const handleSubmit = async (e) => {
 
   try {
     const respuesta = await fetch(
-      `${"http://127.0.0.1:8000"}/auth/recuperar`,
+      `${import.meta.env.VITE_API_URL}/auth/recuperar`,
       {
         method: "POST",
         headers: {
