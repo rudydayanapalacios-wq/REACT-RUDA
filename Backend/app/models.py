@@ -253,7 +253,7 @@ class Venta(Base):
 
     fecha = Column(
         DateTime,
-        server_default=func.getdate(),
+        server_default=func.now(),
         nullable=False
     )
 
@@ -376,6 +376,6 @@ class PQR(Base):
 
     fecha = Column(
         DateTime,
-        server_default=func.getdate(),
+        server_default=func.now(),
         nullable=False
     )
