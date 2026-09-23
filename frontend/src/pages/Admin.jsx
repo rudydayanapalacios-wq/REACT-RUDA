@@ -1537,8 +1537,8 @@ return (
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white p-1">
 
                 <img
-                  src="/img/logo-sena.png"
-                  alt="Logo SENA"
+                  src="/img/logo.png"
+                  alt="Logo MUGI"
                   className="h-full w-full object-contain"
                 />
 
