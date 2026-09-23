@@ -34,6 +34,19 @@ allow_origins=[
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)# ==========================================================
+# CORS
+# ==========================================================
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+    ],
+    allow_origin_regex=r"https://mugi-store-[a-z0-9]+-rudy-05c0\.vercel\.app",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 # ==========================================================
 # RUTAS
