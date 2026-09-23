@@ -9,6 +9,7 @@ import {
   UserRound,
   Users,
   MessageCircle,
+  ShoppingBag,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
@@ -38,12 +39,13 @@ export default function EstructuraPanel({
       ["/admin/pqr", "PQR", MessageCircle],
     ],
 
-    empleado: [
-      ["/empleado", "Dashboard", LayoutDashboard],
-      ["/empleado/productos", "Productos", Boxes],
-      ["/empleado/ventas", "Ventas", FileText],
-      ["/empleado/pqr", "PQR", MessageCircle],
-    ],
+  empleado: [
+  ["/empleado", "Dashboard", LayoutDashboard],
+  ["/empleado/productos", "Productos", Boxes],
+  ["/empleado/ventas", "Ventas", FileText],
+  ["/empleado-compras", "Compras", ShoppingBag],
+  ["/empleado/pqr", "PQR", MessageCircle],
+],
 
     cliente: [
       ["/cliente", "Mi espacio", LayoutDashboard],
