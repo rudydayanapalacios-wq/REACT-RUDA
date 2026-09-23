@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   UserRoundCheck,
   UserRound,
+  Eye,
   Users,
   Menu,
   X,
@@ -95,6 +96,8 @@ function Admin() {
   });
 
   const [erroresProducto, setErroresProducto] = useState({});
+
+  const [detalle, setDetalle] = useState(null);
 
   // ============================================================
   // DASHBOARD
@@ -281,6 +284,8 @@ const clientesFiltrados = clientes.filter((cliente) => {
     setMenuAbierto(false);
     navigate(ruta);
   };
+
+  const cerrarDetalle = () => setDetalle(null);
 
   // ============================================================
   // INDICADORES DEL DASHBOARD
@@ -1488,6 +1493,110 @@ return (
           </nav>
 
           <div className="mt-6 border-t border-white/10 pt-5">
+
+          {/* =====================================================
+              MODAL DETALLE
+          ====================================================== */}
+
+          {detalle && (
+            <div
+              className="fixed inset-0 z-[10000] flex items-center justify-center bg-[#160B0C]/70 p-4 backdrop-blur-sm"
+              onMouseDown={(evento) => {
+                if (evento.target === evento.currentTarget) cerrarDetalle();
+              }}
+            >
+              <div className="w-full max-w-2xl rounded-[28px] border border-[#D4AF37]/30 bg-[#F8F3EA] shadow-2xl">
+                <div className="flex items-center justify-between border-b border-[#D8BA98] px-6 py-5">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#927E70]">
+                      {detalle.tipo === "producto" ? "Catálogo" : "Operación"}
+                    </p>
+                    <h2 className="mt-1 font-serif text-2xl font-bold text-[#7F0303]">
+                      Detalle de {detalle.tipo === "producto" ? "producto" : "cuenta"}
+                    </h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={cerrarDetalle}
+                    aria-label="Cerrar detalle"
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-[#D8BA98] text-[#7F0303] transition hover:bg-[#EFE8DF]"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {detalle.tipo === "producto" ? (
+                  <div className="grid gap-4 p-6 sm:grid-cols-2">
+                    <div className="sm:col-span-2">
+                      <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Nombre</p>
+                      <p className="mt-1 text-lg font-semibold text-[#2C1B1B]">{detalle.datos.nombre || "Sin nombre"}</p>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Descripción</p>
+                      <p className="mt-1 leading-6 text-[#2C1B1B]">{detalle.datos.descripcion || "Sin descripción"}</p>
+                    </div>
+                    <div className="rounded-xl border border-[#D8BA98] bg-white p-4">
+                      <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Precio</p>
+                      <p className="mt-1 font-semibold text-[#7F0303]">{formatearMoneda(detalle.datos.precio || 0)}</p>
+                    </div>
+                    <div className="rounded-xl border border-[#D8BA98] bg-white p-4">
+                      <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Stock</p>
+                      <p className="mt-1 font-semibold text-[#2C1B1B]">{detalle.datos.stock ?? 0} unidades</p>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Estado</p>
+                      <p className="mt-1 font-semibold text-[#2C1B1B]">{detalle.datos.estado ? "Activo" : "Inactivo"}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 p-6 sm:grid-cols-2">
+                    <div className="sm:col-span-2">
+                      <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Nombre completo</p>
+                      <p className="mt-1 text-lg font-semibold text-[#2C1B1B]">{detalle.datos.nombres} {detalle.datos.apellidos}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Tipo de documento</p>
+                      <p className="mt-1 text-[#2C1B1B]">{detalle.datos.tipo_documento || "No registrado"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Número de documento</p>
+                      <p className="mt-1 text-[#2C1B1B]">{detalle.datos.numero_documento || "No registrado"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Correo</p>
+                      <p className="mt-1 break-words text-[#2C1B1B]">{detalle.datos.email || "No registrado"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Teléfono</p>
+                      <p className="mt-1 text-[#2C1B1B]">{detalle.datos.telefono || "No registrado"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Rol</p>
+                      <p className="mt-1 text-[#2C1B1B]">{obtenerNombreRol(detalle.datos)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Estado</p>
+                      <p className="mt-1 text-[#2C1B1B]">{detalle.datos.estado ? "Activo" : "Inactivo"}</p>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Dirección</p>
+                      <p className="mt-1 text-[#2C1B1B]">{detalle.datos.direccion || "No registrada"}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-end border-t border-[#D8BA98] px-6 py-4">
+                  <button
+                    type="button"
+                    onClick={cerrarDetalle}
+                    className="rounded-xl bg-[#7F0303] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#5F0202]"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
             <div className="flex items-center gap-3">
 
@@ -2962,6 +3071,14 @@ return (
                                   <div className="grid grid-cols-2 gap-2">
                                     <button
                                       type="button"
+                                      onClick={() => setDetalle({ tipo: "cuenta", datos: cliente })}
+                                      className="col-span-2 flex items-center justify-center gap-2 rounded-lg border border-[#D8BA98] bg-white px-3 py-2 text-xs font-bold text-[#7F0303] transition hover:border-[#D4AF37] hover:bg-[#EFE8DF]"
+                                    >
+                                      <Eye size={14} />
+                                      Ver detalle
+                                    </button>
+                                    <button
+                                      type="button"
                                       onClick={() => abrirEditarCliente(cliente)}
                                       className="rounded-lg bg-[#D4AF37] px-3 py-2 text-xs font-bold text-[#4A0505] transition hover:bg-[#C29D26]"
                                     >
@@ -3142,6 +3259,14 @@ return (
                                 </td>
                                 <td className="w-[210px] px-5 py-4">
                                   <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => setDetalle({ tipo: "producto", datos: producto })}
+                                      className="col-span-2 flex items-center justify-center gap-2 rounded-lg border border-[#D8BA98] bg-white px-3 py-2 text-xs font-bold text-[#7F0303] transition hover:border-[#D4AF37] hover:bg-[#EFE8DF]"
+                                    >
+                                      <Eye size={14} />
+                                      Ver detalle
+                                    </button>
                                     <button
                                       type="button"
                                       onClick={() => abrirEditarProducto(producto)}
