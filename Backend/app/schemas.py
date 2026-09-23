@@ -5,7 +5,7 @@ from pydantic import (
     EmailStr,
     Field,
     ConfigDict,
-    field_validator
+    field_validator,
 )
 
 
@@ -65,7 +65,6 @@ def validar_telefono(valor: str | None) -> str | None:
 # ==========================================================
 
 class UsuarioCreate(BaseModel):
-
     rol_id: int
 
     nombres: str = Field(
@@ -133,25 +132,17 @@ class UsuarioCreate(BaseModel):
 # ==========================================================
 
 class UsuarioResponse(BaseModel):
-
     id: int
     rol_id: int
-
     nombres: str
     apellidos: str
-
     tipo_documento: str
     numero_documento: str
-
     direccion: str | None
     telefono: str | None
-
     email: EmailStr
-
     foto: str | None
-
     estado: bool
-
     ultimo_acceso: datetime | None
     fecha_registro: datetime | None
     fecha_actualizacion: datetime | None
@@ -166,7 +157,6 @@ class UsuarioResponse(BaseModel):
 # ==========================================================
 
 class LoginRequest(BaseModel):
-
     email: EmailStr
 
     password: str = Field(
@@ -176,7 +166,6 @@ class LoginRequest(BaseModel):
 
 
 class LoginResponse(BaseModel):
-
     success: bool
     token: str
     usuario: UsuarioResponse
@@ -187,7 +176,6 @@ class LoginResponse(BaseModel):
 # ==========================================================
 
 class UsuarioUpdate(BaseModel):
-
     rol_id: int | None = None
 
     nombres: str | None = Field(
@@ -266,7 +254,6 @@ class UsuarioUpdate(BaseModel):
 # ==========================================================
 
 class UsuarioEstado(BaseModel):
-
     estado: bool
 
 
@@ -275,7 +262,6 @@ class UsuarioEstado(BaseModel):
 # ==========================================================
 
 class UsuarioPerfilUpdate(BaseModel):
-
     nombres: str = Field(
         min_length=2,
         max_length=100
@@ -328,7 +314,6 @@ class UsuarioPerfilUpdate(BaseModel):
 # ==========================================================
 
 class ProductoCreate(BaseModel):
-
     nombre: str = Field(
         min_length=2,
         max_length=150
@@ -378,7 +363,6 @@ class ProductoCreate(BaseModel):
 # ==========================================================
 
 class ProductoUpdate(BaseModel):
-
     nombre: str = Field(
         min_length=2,
         max_length=150
@@ -430,19 +414,12 @@ class ProductoUpdate(BaseModel):
 # ==========================================================
 
 class ProductoResponse(BaseModel):
-
     id: int
-
     nombre: str
-
     descripcion: str | None
-
     precio: float
-
     stock: int
-
     imagen: str | None
-
     estado: bool
 
     model_config = ConfigDict(
@@ -455,7 +432,6 @@ class ProductoResponse(BaseModel):
 # ==========================================================
 
 class VentaDetalleCreate(BaseModel):
-
     producto_id: int = Field(
         gt=0
     )
@@ -466,7 +442,6 @@ class VentaDetalleCreate(BaseModel):
 
 
 class VentaCreate(BaseModel):
-
     detalles: list[VentaDetalleCreate] = Field(
         min_length=1
     )
@@ -477,12 +452,10 @@ class VentaCreate(BaseModel):
 # ==========================================================
 
 class RecuperarContrasenaRequest(BaseModel):
-
     email: EmailStr
 
 
 class RestablecerContrasenaRequest(BaseModel):
-
     token: str
 
     nueva_password: str = Field(
@@ -491,9 +464,6 @@ class RestablecerContrasenaRequest(BaseModel):
     )
 
 
-    # ==========================================================
-# PQR
-# ==========================================================
 # ==========================================================
 # PQR
 # ==========================================================
@@ -609,4 +579,6 @@ class PQRResponse(BaseModel):
     estado: str
     fecha: datetime
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True
+    )
