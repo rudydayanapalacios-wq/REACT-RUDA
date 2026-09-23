@@ -792,3 +792,4 @@ function ProductoCard({
   );
 }
 
+export default ProductoCard;
