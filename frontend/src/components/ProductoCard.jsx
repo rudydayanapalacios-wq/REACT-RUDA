@@ -4,6 +4,7 @@
 
 import { useCarrito } from "../context/CarritoContext";
 import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 function ProductoCard({
   id,
@@ -21,6 +22,7 @@ function ProductoCard({
   } = useCarrito();
 
   const { autenticado } = useAuth();
+  const navigate = useNavigate();
 
   // ==========================================================
   // INFORMACIÓN DEL PRODUCTO
@@ -87,7 +89,7 @@ function ProductoCard({
         JSON.stringify(productoPendiente)
       );
 
-      window.location.href = "/login";
+      navigate("/login");
       return;
     }
 
@@ -147,7 +149,6 @@ function ProductoCard({
         imagen,
         stock: stockDisponible,
       });
-
       return;
     }
 
@@ -171,7 +172,6 @@ function ProductoCard({
       return;
     }
 
-    // Si está en 0 no hacemos nada
     if (cantidadEnCarrito <= 0) {
       return;
     }
@@ -521,8 +521,6 @@ function ProductoCard({
 
             {/* ==================================================
                 CONTROL DE CANTIDAD
-
-                AHORA SIEMPRE APARECE
                 ================================================== */}
 
             <div
@@ -762,11 +760,12 @@ function ProductoCard({
           >
             {textoBoton}
 
-            {!sinStock && cantidadEnCarrito === 0 && (
-              <span className="text-base">
-                🛒
-              </span>
-            )}
+            {!sinStock &&
+              cantidadEnCarrito === 0 && (
+                <span className="text-base">
+                  🛒
+                </span>
+              )}
           </button>
 
           {/* ==================================================
@@ -793,4 +792,3 @@ function ProductoCard({
   );
 }
 
-export default ProductoCard;
