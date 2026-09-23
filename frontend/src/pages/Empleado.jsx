@@ -53,8 +53,7 @@ function Empleado() {
   const [actualizando, setActualizando] = useState(false);
   const [periodoGrafico, setPeriodoGrafico] = useState("dia");
 
-  const [paginaPqr, setPaginaPqr] = useState(1);
-  const elementosPorPaginaPqr = 5;
+
 
   // ============================================================
   // CONFIGURACIÓN
@@ -258,17 +257,11 @@ function Empleado() {
 
 
 
-const indiceInicioPqr =
-  (paginaPqr - 1) * elementosPorPaginaPqr;
 
-const pqrPaginadas = pqr.slice(
-  indiceInicioPqr,
-  indiceInicioPqr + elementosPorPaginaPqr
-);
 
-const totalPaginasPqr = Math.ceil(
-  pqr.length / elementosPorPaginaPqr
-);
+
+
+
 
 
 
