@@ -2860,6 +2860,166 @@ return (
 
 
             {/* =================================================
+                CUENTAS
+            ================================================== */}
+
+            {vista === "usuarios" && (
+              <div>
+                <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#927E70]">
+                      Operación
+                    </p>
+                    <h2 className="mt-1 font-serif text-3xl font-bold text-[#7F0303]">
+                      Cuentas
+                    </h2>
+                    <p className="mt-2 text-sm text-[#927E70]">
+                      Administra los usuarios registrados en MUGI STORE.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={abrirCrearCliente}
+                    className="flex items-center justify-center gap-2 rounded-xl bg-[#7F0303] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#5F0202]"
+                  >
+                    <UserRound size={18} />
+                    Agregar cliente
+                  </button>
+                </div>
+
+                <div className="overflow-hidden rounded-[24px] border border-[#D8BA98] bg-[#F8F3EA] shadow-sm">
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[1100px] text-left text-sm">
+                      <thead className="bg-[#4A0505] text-[#F8F3EA]">
+                        <tr>
+                          {[
+                            "Nombre",
+                            "Documento",
+                            "Correo",
+                            "Teléfono",
+                            "Rol",
+                            "Estado",
+                            "Acciones",
+                          ].map((encabezado) => (
+                            <th key={encabezado} className="px-5 py-4 text-xs font-bold uppercase tracking-wider">
+                              {encabezado}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+
+                      <tbody className="divide-y divide-[#E3D7C8]">
+                        {cargandoClientes ? (
+                          <tr>
+                            <td colSpan="7" className="px-5 py-12 text-center text-sm text-[#927E70]">
+                              Cargando cuentas...
+                            </td>
+                          </tr>
+                        ) : clientesFiltrados.length === 0 ? (
+                          <tr>
+                            <td colSpan="7" className="px-5 py-12 text-center text-sm text-[#927E70]">
+                              No hay cuentas que coincidan con los filtros.
+                            </td>
+                          </tr>
+                        ) : (
+                          clientesFiltrados
+                            .slice(
+                              (paginaUsuarios - 1) * elementosPorPagina,
+                              paginaUsuarios * elementosPorPagina
+                            )
+                            .map((cliente) => (
+                              <tr key={cliente.id} className="transition hover:bg-[#EFE8DF]">
+                                <td className="max-w-[220px] px-5 py-4 font-semibold">
+                                  {cliente.nombres} {cliente.apellidos}
+                                </td>
+                                <td className="whitespace-nowrap px-5 py-4 text-[#927E70]">
+                                  {cliente.numero_documento || "Sin documento"}
+                                </td>
+                                <td className="px-5 py-4 text-[#927E70]">
+                                  {cliente.email || "Sin correo"}
+                                </td>
+                                <td className="whitespace-nowrap px-5 py-4 text-[#927E70]">
+                                  {cliente.telefono || "Sin teléfono"}
+                                </td>
+                                <td className="px-5 py-4">
+                                  <span className="inline-flex rounded-lg bg-[#E8D8BD] px-3 py-1.5 text-xs font-bold text-[#7F0303]">
+                                    {obtenerNombreRol(cliente)}
+                                  </span>
+                                </td>
+                                <td className="px-5 py-4">
+                                  <span
+                                    className={`inline-flex rounded-lg px-3 py-1.5 text-xs font-bold ${
+                                      cliente.estado
+                                        ? "bg-[#E5EAD9] text-[#40552B]"
+                                        : "bg-[#EAD9D9] text-[#7F0303]"
+                                    }`}
+                                  >
+                                    {cliente.estado ? "Activo" : "Inactivo"}
+                                  </span>
+                                </td>
+                                <td className="w-[210px] px-5 py-4">
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => abrirEditarCliente(cliente)}
+                                      className="rounded-lg bg-[#D4AF37] px-3 py-2 text-xs font-bold text-[#4A0505] transition hover:bg-[#C29D26]"
+                                    >
+                                      Editar
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => cambiarEstadoCliente(cliente)}
+                                      className="rounded-lg border border-[#7F0303] px-3 py-2 text-xs font-bold text-[#7F0303] transition hover:bg-[#7F0303] hover:text-white"
+                                    >
+                                      {cliente.estado ? "Desactivar" : "Activar"}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => eliminarCliente(cliente)}
+                                      className="col-span-2 rounded-lg bg-[#7F0303] px-3 py-2 text-xs font-bold text-white transition hover:bg-[#5F0202]"
+                                    >
+                                      Eliminar
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {clientesFiltrados.length > elementosPorPagina && (
+                    <div className="flex flex-col gap-3 border-t border-[#D8BA98] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-xs text-[#927E70]">
+                        Página {paginaUsuarios} de {Math.ceil(clientesFiltrados.length / elementosPorPagina)}
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          disabled={paginaUsuarios === 1}
+                          onClick={() => setPaginaUsuarios((pagina) => Math.max(1, pagina - 1))}
+                          className="rounded-lg border border-[#D8BA98] bg-white px-3 py-2 text-xs font-bold text-[#7F0303] transition hover:border-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          Anterior
+                        </button>
+                        <button
+                          type="button"
+                          disabled={paginaUsuarios >= Math.ceil(clientesFiltrados.length / elementosPorPagina)}
+                          onClick={() => setPaginaUsuarios((pagina) => Math.min(Math.ceil(clientesFiltrados.length / elementosPorPagina), pagina + 1))}
+                          className="rounded-lg border border-[#D8BA98] bg-white px-3 py-2 text-xs font-bold text-[#7F0303] transition hover:border-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          Siguiente
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* =================================================
                 PRODUCTOS
             ================================================== */}
 
@@ -2934,103 +3094,81 @@ return (
 
                       </thead>
 
-             <tbody className="divide-y divide-[#E3D7C8]">
-  {cargandoClientes ? (
-    <tr>
-      <td
-        colSpan="7"
-        className="px-5 py-12 text-center text-sm text-[#927E70]"
-      >
-        Cargando cuentas...
-      </td>
-    </tr>
-  ) : clientesFiltrados.length === 0 ? (
-    <tr>
-      <td
-        colSpan="7"
-        className="px-5 py-12 text-center text-sm text-[#927E70]"
-      >
-        No hay cuentas que coincidan con los filtros.
-      </td>
-    </tr>
-  ) : (
-    clientesFiltrados
-      .slice(
-        (paginaUsuarios - 1) * elementosPorPagina,
-        paginaUsuarios * elementosPorPagina
-      )
-      .map((cliente) => (
-        <tr
-          key={cliente.id}
-          className="transition hover:bg-[#EFE8DF]"
-        >
-          <td className="px-5 py-4">
-            <div className="font-semibold">
-              {cliente.nombres} {cliente.apellidos}
-            </div>
-          </td>
-
-          <td className="px-5 py-4 text-[#927E70]">
-            {cliente.numero_documento}
-          </td>
-
-          <td className="px-5 py-4 text-[#927E70]">
-            {cliente.email}
-          </td>
-
-          <td className="px-5 py-4 text-[#927E70]">
-            {cliente.telefono}
-          </td>
-
-          <td className="px-5 py-4">
-            <span className="inline-flex rounded-lg bg-[#E8D8BD] px-3 py-1.5 text-xs font-bold text-[#7F0303]">
-              {obtenerNombreRol(cliente)}
-            </span>
-          </td>
-
-          <td className="px-5 py-4">
-            <span
-              className={`inline-flex rounded-lg px-3 py-1.5 text-xs font-bold ${
-                cliente.estado
-                  ? "bg-[#E5EAD9] text-[#40552B]"
-                  : "bg-[#EAD9D9] text-[#7F0303]"
-              }`}
-            >
-              {cliente.estado ? "Activo" : "Inactivo"}
-            </span>
-          </td>
-
-          <td className="px-5 py-4">
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => abrirEditarCliente(cliente)}
-                className="rounded-lg bg-[#D4AF37] px-3 py-2 text-xs font-bold text-[#4A0505] transition hover:bg-[#C29D26]"
-              >
-                Editar
-              </button>
-
-              <button
-                type="button"
-                onClick={() => cambiarEstadoCliente(cliente)}
-                className="rounded-lg border border-[#7F0303] px-3 py-2 text-xs font-bold text-[#7F0303] transition hover:bg-[#7F0303] hover:text-white"
-              >
-                {cliente.estado ? "Desactivar" : "Activar"}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => eliminarCliente(cliente)}
-                className="rounded-lg bg-[#7F0303] px-3 py-2 text-xs font-bold text-white transition hover:bg-[#5F0202]"
-              >
-                Eliminar
-              </button>
-            </div>
-          </td>
-        </tr>
-      ))
-  )}
-</tbody>
+                      <tbody className="divide-y divide-[#E3D7C8]">
+                        {cargandoProductos ? (
+                          <tr>
+                            <td colSpan="6" className="px-5 py-12 text-center text-sm text-[#927E70]">
+                              Cargando productos...
+                            </td>
+                          </tr>
+                        ) : productos.length === 0 ? (
+                          <tr>
+                            <td colSpan="6" className="px-5 py-12 text-center text-sm text-[#927E70]">
+                              No hay productos registrados.
+                            </td>
+                          </tr>
+                        ) : (
+                          productos
+                            .slice(
+                              (paginaProductos - 1) * elementosPorPagina,
+                              paginaProductos * elementosPorPagina
+                            )
+                            .map((producto) => (
+                              <tr key={producto.id} className="transition hover:bg-[#EFE8DF]">
+                                <td className="max-w-[220px] px-5 py-4 font-semibold text-[#2C1B1B]">
+                                  {producto.nombre || "Sin nombre"}
+                                </td>
+                                <td className="max-w-[280px] px-5 py-4 text-[#927E70]">
+                                  <span className="line-clamp-2">
+                                    {producto.descripcion || "Sin descripción"}
+                                  </span>
+                                </td>
+                                <td className="whitespace-nowrap px-5 py-4 font-semibold text-[#7F0303]">
+                                  {formatearMoneda(producto.precio || 0)}
+                                </td>
+                                <td className="whitespace-nowrap px-5 py-4 text-[#927E70]">
+                                  {producto.stock ?? 0} unidades
+                                </td>
+                                <td className="px-5 py-4">
+                                  <span
+                                    className={`inline-flex rounded-lg px-3 py-1.5 text-xs font-bold ${
+                                      producto.estado
+                                        ? "bg-[#E5EAD9] text-[#40552B]"
+                                        : "bg-[#EAD9D9] text-[#7F0303]"
+                                    }`}
+                                  >
+                                    {producto.estado ? "Activo" : "Inactivo"}
+                                  </span>
+                                </td>
+                                <td className="w-[210px] px-5 py-4">
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => abrirEditarProducto(producto)}
+                                      className="rounded-lg bg-[#D4AF37] px-3 py-2 text-xs font-bold text-[#4A0505] transition hover:bg-[#C29D26]"
+                                    >
+                                      Editar
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => cambiarEstadoProducto(producto)}
+                                      className="rounded-lg border border-[#7F0303] px-3 py-2 text-xs font-bold text-[#7F0303] transition hover:bg-[#7F0303] hover:text-white"
+                                    >
+                                      {producto.estado ? "Desactivar" : "Activar"}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => eliminarProducto(producto)}
+                                      className="col-span-2 rounded-lg bg-[#7F0303] px-3 py-2 text-xs font-bold text-white transition hover:bg-[#5F0202]"
+                                    >
+                                      Eliminar
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                        )}
+                      </tbody>
 
                     </table>
 
