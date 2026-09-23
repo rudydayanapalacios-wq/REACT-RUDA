@@ -32,6 +32,7 @@ export default function GestionComercial() {
   const [error, setError] = useState("");
 
   const [descargandoFactura, setDescargandoFactura] = useState(null);
+  const [ventaDetalle, setVentaDetalle] = useState(null);
 
   // ============================================================
   // FECHA DEL REPORTE
@@ -408,7 +409,7 @@ export default function GestionComercial() {
       return;
     }
 
-    navigate(`/factura/${id}`);
+    setVentaDetalle(venta);
   };
 
   // ============================================================
@@ -2175,6 +2176,103 @@ export default function GestionComercial() {
         </section>
 
       </div>
+
+      {ventaDetalle && (
+        <div
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-[#160B0C]/70 p-4 backdrop-blur-sm"
+          onMouseDown={(evento) => {
+            if (evento.target === evento.currentTarget) setVentaDetalle(null);
+          }}
+        >
+          <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-[28px] border border-[#D4AF37]/40 bg-[#F8F3EA] shadow-2xl">
+            <div className="flex items-start justify-between border-b border-[#D8BA98] px-6 py-5 sm:px-8">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.25em] text-[#927E70]">MUGI STORE · Factura</p>
+                <h2 className="mt-1 font-serif text-3xl font-bold text-[#7F0303]">
+                  {obtenerNumeroFactura(ventaDetalle)}
+                </h2>
+                <p className="mt-1 text-sm text-[#927E70]">Detalle de la venta registrada</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setVentaDetalle(null)}
+                aria-label="Cerrar factura"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-[#D8BA98] text-[#7F0303] transition hover:bg-[#EFE8DF]"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-6 p-6 sm:p-8">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-[#D8BA98] bg-white p-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Cliente</p>
+                  <p className="mt-1 font-semibold text-[#2C1B1B]">{obtenerCliente(ventaDetalle)}</p>
+                </div>
+                <div className="rounded-xl border border-[#D8BA98] bg-white p-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Fecha</p>
+                  <p className="mt-1 font-semibold text-[#2C1B1B]">{obtenerFecha(ventaDetalle)}</p>
+                </div>
+                <div className="rounded-xl border border-[#D8BA98] bg-white p-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Estado</p>
+                  <p className="mt-1 font-semibold text-[#40552B]">{ventaDetalle.estado || "Venta registrada"}</p>
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <h3 className="font-serif text-xl font-bold text-[#7F0303]">Productos</h3>
+                  <span className="text-sm font-semibold text-[#927E70]">
+                    {(ventaDetalle.detalles || []).reduce((cantidad, detalleVenta) => cantidad + Number(detalleVenta.cantidad || 0), 0)} unidades
+                  </span>
+                </div>
+                <div className="overflow-hidden rounded-2xl border border-[#D8BA98] bg-white">
+                  {(ventaDetalle.detalles || []).length === 0 ? (
+                    <p className="p-5 text-sm text-[#927E70]">No hay productos detallados en esta venta.</p>
+                  ) : (
+                    <div className="divide-y divide-[#EFE8DF]">
+                      {ventaDetalle.detalles.map((detalleVenta, detalleIndex) => (
+                        <div key={detalleIndex} className="flex flex-wrap items-center justify-between gap-4 p-4">
+                          <div>
+                            <p className="font-semibold text-[#2C1B1B]">{detalleVenta.producto || "Producto"}</p>
+                            <p className="mt-1 text-xs text-[#927E70]">
+                              Cantidad: {detalleVenta.cantidad || 0} · Valor unitario: {formatearPrecio(detalleVenta.precio_unitario)}
+                            </p>
+                          </div>
+                          <p className="font-bold text-[#7F0303]">{formatearPrecio(detalleVenta.subtotal)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between border-t-2 border-[#7F0303] pt-4">
+                <span className="text-lg font-bold text-[#2C1B1B]">Total de la factura</span>
+                <span className="text-2xl font-bold text-[#7F0303]">{formatearPrecio(obtenerTotal(ventaDetalle))}</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col-reverse gap-3 border-t border-[#D8BA98] px-6 py-4 sm:flex-row sm:justify-end sm:px-8">
+              <button
+                type="button"
+                onClick={() => setVentaDetalle(null)}
+                className="rounded-xl border border-[#D8BA98] px-5 py-3 text-sm font-bold text-[#7F0303] transition hover:bg-[#EFE8DF]"
+              >
+                Cerrar detalle
+              </button>
+              <button
+                type="button"
+                onClick={() => descargarPDF(ventaDetalle)}
+                className="flex items-center justify-center gap-2 rounded-xl bg-[#7F0303] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#5F0202]"
+              >
+                <Download size={16} />
+                Descargar PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

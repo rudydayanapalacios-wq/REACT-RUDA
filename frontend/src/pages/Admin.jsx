@@ -1549,43 +1549,77 @@ return (
                     </div>
                   </div>
                 ) : (
-                  <div className="grid gap-4 p-6 sm:grid-cols-2">
-                    <div className="sm:col-span-2">
-                      <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Nombre completo</p>
-                      <p className="mt-1 text-lg font-semibold text-[#2C1B1B]">{detalle.datos.nombres} {detalle.datos.apellidos}</p>
+                  <div className="p-6">
+                    <div className="flex flex-col gap-4 border-b border-[#E3D7C8] pb-6 sm:flex-row sm:items-center">
+                      <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-[#4A0505] font-serif text-3xl font-bold text-[#D4AF37]">
+                        {`${detalle.datos.nombres?.[0] || ""}${detalle.datos.apellidos?.[0] || ""}`.toUpperCase() || "U"}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">
+                          Cuenta #{detalle.datos.id ?? "-"}
+                        </p>
+                        <h3 className="mt-1 text-2xl font-bold text-[#2C1B1B]">
+                          {detalle.datos.nombres} {detalle.datos.apellidos}
+                        </h3>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <span className="rounded-full bg-[#E8D8BD] px-3 py-1.5 text-xs font-bold text-[#7F0303]">
+                            {obtenerNombreRol(detalle.datos)}
+                          </span>
+                          <span className={`rounded-full px-3 py-1.5 text-xs font-bold ${detalle.datos.estado ? "bg-[#E5EAD9] text-[#40552B]" : "bg-[#EAD9D9] text-[#7F0303]"}`}>
+                            {detalle.datos.estado ? "Cuenta activa" : "Cuenta inactiva"}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Tipo de documento</p>
-                      <p className="mt-1 text-[#2C1B1B]">{detalle.datos.tipo_documento || "No registrado"}</p>
+
+                    <div className="mt-6">
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#927E70]">Información de contacto</p>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-xl border border-[#D8BA98] bg-white p-4">
+                          <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Correo electrónico</p>
+                          <p className="mt-1 break-words font-semibold text-[#2C1B1B]">{detalle.datos.email || "No registrado"}</p>
+                        </div>
+                        <div className="rounded-xl border border-[#D8BA98] bg-white p-4">
+                          <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Teléfono</p>
+                          <p className="mt-1 font-semibold text-[#2C1B1B]">{detalle.datos.telefono || "No registrado"}</p>
+                        </div>
+                        <div className="rounded-xl border border-[#D8BA98] bg-white p-4 sm:col-span-2">
+                          <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Dirección</p>
+                          <p className="mt-1 font-semibold text-[#2C1B1B]">{detalle.datos.direccion || "No registrada"}</p>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Número de documento</p>
-                      <p className="mt-1 text-[#2C1B1B]">{detalle.datos.numero_documento || "No registrado"}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Correo</p>
-                      <p className="mt-1 break-words text-[#2C1B1B]">{detalle.datos.email || "No registrado"}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Teléfono</p>
-                      <p className="mt-1 text-[#2C1B1B]">{detalle.datos.telefono || "No registrado"}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Rol</p>
-                      <p className="mt-1 text-[#2C1B1B]">{obtenerNombreRol(detalle.datos)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Estado</p>
-                      <p className="mt-1 text-[#2C1B1B]">{detalle.datos.estado ? "Activo" : "Inactivo"}</p>
-                    </div>
-                    <div className="sm:col-span-2">
-                      <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Dirección</p>
-                      <p className="mt-1 text-[#2C1B1B]">{detalle.datos.direccion || "No registrada"}</p>
+
+                    <div className="mt-6">
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#927E70]">Identificación</p>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-xl border border-[#D8BA98] bg-white p-4">
+                          <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Tipo de documento</p>
+                          <p className="mt-1 font-semibold text-[#2C1B1B]">{detalle.datos.tipo_documento || "No registrado"}</p>
+                        </div>
+                        <div className="rounded-xl border border-[#D8BA98] bg-white p-4">
+                          <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Número de documento</p>
+                          <p className="mt-1 font-semibold text-[#2C1B1B]">{detalle.datos.numero_documento || "No registrado"}</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
 
-                <div className="flex justify-end border-t border-[#D8BA98] px-6 py-4">
+                <div className="flex flex-col-reverse gap-3 border-t border-[#D8BA98] px-6 py-4 sm:flex-row sm:justify-end">
+                  {detalle.tipo === "cuenta" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const cliente = detalle.datos;
+                        cerrarDetalle();
+                        abrirEditarCliente(cliente);
+                      }}
+                      className="rounded-xl border border-[#D8BA98] px-5 py-3 text-sm font-bold text-[#7F0303] transition hover:bg-[#EFE8DF]"
+                    >
+                      Editar cuenta
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={cerrarDetalle}
