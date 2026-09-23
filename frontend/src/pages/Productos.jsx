@@ -159,13 +159,50 @@ function Productos() {
   // FILTRAR PRODUCTOS
   // ============================================================
 
-  const productosFiltrados =
-    filtro === "Todos"
-      ? productosActivos
-      : productosActivos.filter(
-          (producto) =>
-            producto.categoria === filtro
-        );
+  const palabrasPorFiltro = {
+    Joyas: [
+      "joya",
+      "joyas",
+      "anillo",
+      "arete",
+      "pendiente",
+      "broche",
+    ],
+    Collares: ["collar", "cadena", "gargantilla", "colgante"],
+    Pulseras: ["pulsera", "brazalete", "manilla"],
+    Accesorios: [
+      "accesorio",
+      "accesorios",
+      "llavero",
+      "diadema",
+      "pin",
+      "estuche",
+    ],
+  };
+
+  const productosNovedades = new Set(
+    [...productosActivos]
+      .sort((productoA, productoB) => Number(productoB.id) - Number(productoA.id))
+      .slice(0, 3)
+      .map((producto) => producto.id)
+  );
+
+  const productosFiltrados = productosActivos.filter((producto) => {
+    if (filtro === "Todos") return true;
+
+    if (filtro === "Novedades") {
+      return productosNovedades.has(producto.id);
+    }
+
+    const textoProducto = `${producto.nombre || ""} ${producto.descripcion || ""}`
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+
+    return (palabrasPorFiltro[filtro] || []).some((palabra) =>
+      textoProducto.includes(palabra)
+    );
+  });
 
   // ============================================================
   // RENDER
