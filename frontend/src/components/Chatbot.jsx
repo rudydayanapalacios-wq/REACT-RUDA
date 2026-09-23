@@ -1,13 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  MessageCircle,
-  X,
-  Send,
-  Bot,
-  User,
-  Loader2,
-  Sparkles,
-} from "lucide-react";
+import { MessageCircle, X, Send, Bot, User, Loader2, Sparkles } from "lucide-react";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -81,7 +73,7 @@ function Chatbot() {
       if (!response.ok) {
         throw new Error(
           datos?.detail ||
-            "No fue posible obtener una respuesta."
+          "No fue posible obtener una respuesta."
         );
       }
 
@@ -147,7 +139,11 @@ function Chatbot() {
           title="Abrir MUGI IA"
           aria-label="Abrir MUGI IA"
         >
-          <MessageCircle size={29} />
+          <img
+            src="/img/TELEFONOREAL.png"
+            alt="Chatbot MUGI"
+            className="h-10 w-10 object-contain"
+          />
 
           <span
             className="
@@ -259,18 +255,16 @@ function Chatbot() {
             {mensajes.map((item) => (
               <div
                 key={item.id}
-                className={`flex ${
-                  item.tipo === "usuario"
-                    ? "justify-end"
-                    : "justify-start"
-                }`}
+                className={`flex ${item.tipo === "usuario"
+                  ? "justify-end"
+                  : "justify-start"
+                  }`}
               >
                 <div
-                  className={`flex max-w-[85%] items-end gap-2 ${
-                    item.tipo === "usuario"
-                      ? "flex-row-reverse"
-                      : "flex-row"
-                  }`}
+                  className={`flex max-w-[85%] items-end gap-2 ${item.tipo === "usuario"
+                    ? "flex-row-reverse"
+                    : "flex-row"
+                    }`}
                 >
                   <div
                     className={`
@@ -281,10 +275,9 @@ function Chatbot() {
                       items-center
                       justify-center
                       rounded-full
-                      ${
-                        item.tipo === "usuario"
-                          ? "bg-[#C99A45] text-[#241415]"
-                          : "bg-[#6E1F2B] text-[#F8F3EA]"
+                      ${item.tipo === "usuario"
+                        ? "bg-[#C99A45] text-[#241415]"
+                        : "bg-[#6E1F2B] text-[#F8F3EA]"
                       }
                     `}
                   >
@@ -304,10 +297,9 @@ function Chatbot() {
                       text-sm
                       leading-relaxed
                       shadow-sm
-                      ${
-                        item.tipo === "usuario"
-                          ? "rounded-br-md bg-[#6E1F2B] text-white"
-                          : "rounded-bl-md bg-white text-[#241415]"
+                      ${item.tipo === "usuario"
+                        ? "rounded-br-md bg-[#6E1F2B] text-white"
+                        : "rounded-bl-md bg-white text-[#241415]"
                       }
                     `}
                   >

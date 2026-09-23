@@ -1,6 +1,32 @@
 ﻿import { createContext, useContext, useEffect, useState } from "react";
 
 const AuthContext = createContext();
+export function normalizarRol(usuario = {}) {
+  const candidatos = [
+    usuario?.rol_id,
+    usuario?.id_rol,
+    usuario?.rol?.id,
+    usuario?.rol?.rol_id,
+    usuario?.rol?.id_rol,
+    usuario?.rolId,
+    usuario?.role_id,
+  ];
+
+  for (const valor of candidatos) {
+    if (valor === undefined || valor === null || valor === "") {
+      continue;
+    }
+
+    const numero = Number(valor);
+
+    if (!Number.isNaN(numero)) {
+      return numero;
+    }
+  }
+
+  return null;
+}
+
 
 export function AuthProvider({ children }) {
   // ============================================================

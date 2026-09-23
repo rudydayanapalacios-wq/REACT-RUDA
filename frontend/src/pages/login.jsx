@@ -377,26 +377,42 @@ function Login() {
   // ==========================================================
   // RECUPERAR CONTRASEÑA
   // ==========================================================
+const abrirRecuperar = () => {
+  if (!formulario.email.trim()) {
+    setErrores({
+      email: "Primero ingresa tu correo electrónico.",
+    });
+    return;
+  }
 
-  const abrirRecuperar = () => {
-    setMostrarRecuperar(true);
-  };
+  const errorEmail = validarCampo("email", formulario.email);
 
-  const cerrarRecuperar = () => {
-    setMostrarRecuperar(false);
-  };
+  if (errorEmail) {
+    setErrores({
+      email: errorEmail,
+    });
+    return;
+  }
+
+  setMostrarRecuperar(true);
+};
+
+const cerrarRecuperar = () => {
+  setMostrarRecuperar(false);
+};
 
   // ==========================================================
   // PANTALLA RECUPERACIÓN
   // ==========================================================
 
-  if (mostrarRecuperar) {
-    return (
-      <RecuperarContrasena
-        onBack={cerrarRecuperar}
-      />
-    );
-  }
+if (mostrarRecuperar) {
+  return (
+    <RecuperarContrasena
+      onBack={cerrarRecuperar}
+      correoInicial={formulario.email}
+    />
+  );
+}
 
   // ==========================================================
   // RENDER

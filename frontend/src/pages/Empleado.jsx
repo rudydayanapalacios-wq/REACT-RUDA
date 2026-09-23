@@ -53,6 +53,9 @@ function Empleado() {
   const [actualizando, setActualizando] = useState(false);
   const [periodoGrafico, setPeriodoGrafico] = useState("dia");
 
+  const [paginaPqr, setPaginaPqr] = useState(1);
+  const elementosPorPaginaPqr = 5;
+
   // ============================================================
   // CONFIGURACIÓN
   // ============================================================
@@ -252,6 +255,22 @@ function Empleado() {
         "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300",
     };
   };
+
+
+
+const indiceInicioPqr =
+  (paginaPqr - 1) * elementosPorPaginaPqr;
+
+const pqrPaginadas = pqr.slice(
+  indiceInicioPqr,
+  indiceInicioPqr + elementosPorPaginaPqr
+);
+
+const totalPaginasPqr = Math.ceil(
+  pqr.length / elementosPorPaginaPqr
+);
+
+
 
   // ============================================================
   // DATOS DE VENTAS
@@ -1835,15 +1854,8 @@ function Empleado() {
 
                 </div>
 
-                <div className="flex flex-col">
-  <span className="text-xs font-semibold text-[#241415]">
-    {item.nombre_cliente || `Usuario #${item.usuario_id}`}
-  </span>
 
-  <span className="text-[11px] text-[#806F67]">
-    {item.correo_cliente || "Correo no disponible"}
-  </span>
-</div>
+
 
               </div>
 

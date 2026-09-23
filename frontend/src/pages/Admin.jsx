@@ -149,11 +149,72 @@ function Admin() {
   // PAGINACIÓN
   // ============================================================
 
-  const [paginaUsuarios, setPaginaUsuarios] = useState(1);
-  const [paginaProductos, setPaginaProductos] = useState(1);
+// PAGINACIÓN
+const [paginaUsuarios, setPaginaUsuarios] = useState(1);
+const [paginaProductos, setPaginaProductos] = useState(1);
 
-  const elementosPorPagina = 5;
+const [paginaPqr, setPaginaPqr] = useState(1);
 
+
+const elementosPorPagina = 5;
+
+// FILTROS - USUARIOS
+const [filtroUsuarios, setFiltroUsuarios] = useState("");
+const [filtroRolUsuarios, setFiltroRolUsuarios] = useState("");
+const [filtroEstadoUsuarios, setFiltroEstadoUsuarios] = useState("");
+
+// FILTROS - PRODUCTOS
+const [filtroProductos, setFiltroProductos] = useState("");
+const [filtroEstadoProductos, setFiltroEstadoProductos] = useState("");
+const [filtroStockProductos, setFiltroStockProductos] = useState("");
+
+// FILTROS - PQR
+const [filtroPqr, setFiltroPqr] = useState("");
+const [filtroEstadoPqr, setFiltroEstadoPqr] = useState("");
+const [filtroTipoPqr, setFiltroTipoPqr] = useState("");
+
+
+
+const clientesFiltrados = clientes.filter((cliente) => {
+  const texto = filtroUsuarios.trim().toLowerCase();
+
+  const coincideTexto =
+    !texto ||
+    `${cliente.nombres || ""} ${cliente.apellidos || ""}`
+      .toLowerCase()
+      .includes(texto) ||
+    String(cliente.numero_documento || "")
+      .toLowerCase()
+      .includes(texto) ||
+    String(cliente.email || "")
+      .toLowerCase()
+      .includes(texto) ||
+    String(cliente.telefono || "")
+      .toLowerCase()
+      .includes(texto);
+
+  const rol = Number(
+    cliente?.rol_id ??
+    cliente?.rol?.id ??
+    cliente?.rol?.rol_id
+  );
+
+  const coincideRol =
+    !filtroRolUsuarios ||
+    String(rol) === String(filtroRolUsuarios);
+
+  const activo =
+    cliente.estado === true ||
+    cliente.estado === "activo" ||
+    cliente.estado === "Activo";
+
+  const coincideEstado =
+    !filtroEstadoUsuarios ||
+    (filtroEstadoUsuarios === "activo" && activo) ||
+    (filtroEstadoUsuarios === "inactivo" && !activo);
+
+  return coincideTexto && coincideRol && coincideEstado;
+});
   // ============================================================
   // IMAGEN
   // ============================================================
@@ -1244,19 +1305,17 @@ const datosVentasPorDia = Object.values(
   // PANEL
   // ============================================================
 
-  return (
-    <section className="min-h-screen bg-[#EFE8DF] text-[#2C1B1B]">
+  // PANEL
+return (
+  <section className="min-h-screen bg-[#EFE8DF] text-[#2C1B1B]">
+    <div className="flex min-h-screen">
 
-      <div className="flex min-h-screen">
+      {/* =====================================================
+          SIDEBAR DESKTOP
+      ====================================================== */}
+<aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col overflow-y-auto border-r border-[#D4AF37]/10 bg-[#4A0505] p-5 text-[#F8F3EA] lg:flex">
 
-        {/* =====================================================
-            SIDEBAR DESKTOP
-        ====================================================== */}
-
-        <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-[#D4AF37]/10 bg-[#4A0505] p-5 text-[#F8F3EA] lg:flex">
-
-          <div className="mb-8 flex items-center gap-3 border-b border-white/10 pb-5">
-
+<div className="mb-8 flex items-center gap-3 border-b border-white/10 pb-5">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white p-1">
 
               <img
@@ -1281,7 +1340,7 @@ const datosVentasPorDia = Object.values(
 
           </div>
 
-          <nav className="flex-1 space-y-7 overflow-y-auto">
+          <nav className="flex-1 space-y-7">
 
             <div>
 
@@ -1324,7 +1383,7 @@ const datosVentasPorDia = Object.values(
                 }`}
               >
                 <Users size={18} />
-                Cuentas
+                Usuarios
               </button>
 
             </div>
@@ -1411,6 +1470,7 @@ const datosVentasPorDia = Object.values(
                 <UserRound size={18} />
                 Editar perfil
               </button>
+              
 
               <button
                 type="button"
@@ -1549,7 +1609,7 @@ const datosVentasPorDia = Object.values(
                   }`}
                 >
                   <Users size={18} />
-                  Cuentas
+                  Usuarios
                 </button>
 
                 <button
@@ -2314,7 +2374,7 @@ const datosVentasPorDia = Object.values(
   </div>
 </section>
 
-
+<div className="grid gap-6 lg:grid-cols-2">
 {/* ============================================================
     EST11 - GRÁFICO DE BARRAS
 ============================================================ */}
@@ -2329,44 +2389,44 @@ const datosVentasPorDia = Object.values(
     </p>
   </div>
 
-  <div className="h-[320px] w-full">
-    {cargandoVentas ? (
-      <div className="flex h-full items-center justify-center text-sm font-semibold text-[#6F6258]">
-        Cargando información de ventas...
-      </div>
-    ) : datosVentasPorDia.length === 0 ? (
-      <div className="flex h-full items-center justify-center text-sm font-semibold text-[#6F6258]">
-        No hay ventas registradas para mostrar.
-      </div>
-    ) : (
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={datosVentasPorDia}>
-          <CartesianGrid strokeDasharray="3 3" />
+<div className="h-[150px] w-full">
+  {cargandoVentas ? (
+    <div className="flex h-full items-center justify-center text-sm font-semibold text-[#6F6258]">
+      Cargando información de ventas...
+    </div>
+  ) : datosVentasPorDia.length === 0 ? (
+    <div className="flex h-full items-center justify-center text-sm font-semibold text-[#6F6258]">
+      No hay ventas registradas para mostrar.
+    </div>
+  ) : (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart data={datosVentasPorDia}>
+        <CartesianGrid strokeDasharray="3 3" />
 
-          <XAxis
-            dataKey="nombre"
-            tick={{ fontSize: 12 }}
-          />
+        <XAxis
+          dataKey="nombre"
+          tick={{ fontSize: 12 }}
+        />
 
-          <YAxis
-            allowDecimals={false}
-            tick={{ fontSize: 12 }}
-          />
+        <YAxis
+          allowDecimals={false}
+          tick={{ fontSize: 12 }}
+        />
 
-          <Tooltip />
+        <Tooltip />
 
-          <Bar
-            dataKey="ventas"
-            name="Ventas"
-            fill="#6B1E2B"
-            radius={[8, 8, 0, 0]}
-          />
-        </BarChart>
-      </ResponsiveContainer>
-    )}
-  </div>
+        <Bar
+          dataKey="ventas"
+          name="Ventas"
+          fill="#6B1E2B"
+          barSize={20}
+          radius={[8, 8, 0, 0]}
+        />
+      </BarChart>
+    </ResponsiveContainer>
+  )}
+</div>
 </section>
-
 
 {/* ============================================================
     EST11 - GRÁFICO LINEAL
@@ -2382,7 +2442,7 @@ const datosVentasPorDia = Object.values(
     </p>
   </div>
 
-  <div className="h-[320px] w-full">
+  <div className="h-[220px] w-full">
     {cargandoVentas ? (
       <div className="flex h-full items-center justify-center text-sm font-semibold text-[#6F6258]">
         Cargando información de ventas...
@@ -2428,6 +2488,8 @@ const datosVentasPorDia = Object.values(
     )}
   </div>
 </section>
+
+</div>
 
                 {/* =================================================
                     ESTADO GENERAL
@@ -3021,13 +3083,13 @@ const datosVentasPorDia = Object.values(
 
                   </div>
 
-                  {clientes.length > elementosPorPagina && (
+                    {clientesFiltrados.length > elementosPorPagina && (
                     <div className="flex flex-col gap-3 border-t border-[#D8BA98] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
 
                       <p className="text-xs text-[#927E70]">
                         Página {paginaUsuarios} de{" "}
                         {Math.ceil(
-                          clientes.length /
+                          clientesFiltrados.length /
                             elementosPorPagina
                         )}
                       </p>
@@ -3058,7 +3120,7 @@ const datosVentasPorDia = Object.values(
                           disabled={
                             paginaUsuarios >=
                             Math.ceil(
-                              clientes.length /
+                              clientesFiltrados.length /
                                 elementosPorPagina
                             )
                           }
@@ -3067,7 +3129,7 @@ const datosVentasPorDia = Object.values(
                               (pagina) =>
                                 Math.min(
                                   Math.ceil(
-                                    clientes.length /
+                                    clientesFiltrados.length /
                                       elementosPorPagina
                                   ),
                                   pagina + 1
@@ -3164,184 +3226,103 @@ const datosVentasPorDia = Object.values(
 
                       </thead>
 
-                      <tbody className="divide-y divide-[#E3D7C8]">
+             <tbody className="divide-y divide-[#E3D7C8]">
+  {cargandoClientes ? (
+    <tr>
+      <td
+        colSpan="7"
+        className="px-5 py-12 text-center text-sm text-[#927E70]"
+      >
+        Cargando cuentas...
+      </td>
+    </tr>
+  ) : clientesFiltrados.length === 0 ? (
+    <tr>
+      <td
+        colSpan="7"
+        className="px-5 py-12 text-center text-sm text-[#927E70]"
+      >
+        No hay cuentas que coincidan con los filtros.
+      </td>
+    </tr>
+  ) : (
+    clientesFiltrados
+      .slice(
+        (paginaUsuarios - 1) * elementosPorPagina,
+        paginaUsuarios * elementosPorPagina
+      )
+      .map((cliente) => (
+        <tr
+          key={cliente.id}
+          className="transition hover:bg-[#EFE8DF]"
+        >
+          <td className="px-5 py-4">
+            <div className="font-semibold">
+              {cliente.nombres} {cliente.apellidos}
+            </div>
+          </td>
 
-                        {cargandoProductos ? (
+          <td className="px-5 py-4 text-[#927E70]">
+            {cliente.numero_documento}
+          </td>
 
-                          <tr>
+          <td className="px-5 py-4 text-[#927E70]">
+            {cliente.email}
+          </td>
 
-                            <td
-                              colSpan="6"
-                              className="px-5 py-12 text-center text-sm text-[#927E70]"
-                            >
-                              Cargando productos...
-                            </td>
+          <td className="px-5 py-4 text-[#927E70]">
+            {cliente.telefono}
+          </td>
 
-                          </tr>
+          <td className="px-5 py-4">
+            <span className="inline-flex rounded-lg bg-[#E8D8BD] px-3 py-1.5 text-xs font-bold text-[#7F0303]">
+              {obtenerNombreRol(cliente)}
+            </span>
+          </td>
 
-                        ) : productos.length === 0 ? (
+          <td className="px-5 py-4">
+            <span
+              className={`inline-flex rounded-lg px-3 py-1.5 text-xs font-bold ${
+                cliente.estado
+                  ? "bg-[#E5EAD9] text-[#40552B]"
+                  : "bg-[#EAD9D9] text-[#7F0303]"
+              }`}
+            >
+              {cliente.estado ? "Activo" : "Inactivo"}
+            </span>
+          </td>
 
-                          <tr>
+          <td className="px-5 py-4">
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => abrirEditarCliente(cliente)}
+                className="rounded-lg bg-[#D4AF37] px-3 py-2 text-xs font-bold text-[#4A0505] transition hover:bg-[#C29D26]"
+              >
+                Editar
+              </button>
 
-                            <td
-                              colSpan="6"
-                              className="px-5 py-12 text-center text-sm text-[#927E70]"
-                            >
-                              No hay productos registrados.
-                            </td>
+              <button
+                type="button"
+                onClick={() => cambiarEstadoCliente(cliente)}
+                className="rounded-lg border border-[#7F0303] px-3 py-2 text-xs font-bold text-[#7F0303] transition hover:bg-[#7F0303] hover:text-white"
+              >
+                {cliente.estado ? "Desactivar" : "Activar"}
+              </button>
 
-                          </tr>
-
-                        ) : (
-
-                          productos
-                            .slice(
-                              (paginaProductos - 1) *
-                                elementosPorPagina,
-                              paginaProductos *
-                                elementosPorPagina
-                            )
-                            .map((producto) => (
-
-                              <tr
-                                key={producto.id}
-                                className="transition hover:bg-[#EFE8DF]"
-                              >
-
-                                <td className="px-5 py-4">
-
-                                  <div className="flex items-center gap-3">
-
-                                    {obtenerRutaImagen(
-                                      producto.imagen
-                                    ) ? (
-
-                                      <img
-                                        src={obtenerRutaImagen(
-                                          producto.imagen
-                                        )}
-                                        alt={producto.nombre}
-                                        className="h-12 w-12 rounded-xl border border-[#D8BA98] object-cover"
-                                      />
-
-                                    ) : (
-
-                                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#E8D8BD] text-[#7F0303]">
-                                        <Boxes size={20} />
-                                      </div>
-
-                                    )}
-
-                                    <span className="font-semibold">
-                                      {producto.nombre}
-                                    </span>
-
-                                  </div>
-
-                                </td>
-
-                                <td className="max-w-xs px-5 py-4 text-[#927E70]">
-
-                                  <p className="line-clamp-2">
-                                    {producto.descripcion ||
-                                      "Sin descripción"}
-                                  </p>
-
-                                </td>
-
-                                <td className="px-5 py-4 font-bold text-[#7F0303]">
-
-                                  {Number(
-                                    producto.precio
-                                  ).toLocaleString(
-                                    "es-CO",
-                                    {
-                                      style:
-                                        "currency",
-                                      currency:
-                                        "COP",
-                                    }
-                                  )}
-
-                                </td>
-
-                                <td className="px-5 py-4">
-
-                                  <span className="font-semibold">
-                                    {producto.stock}
-                                  </span>
-
-                                </td>
-
-                                <td className="px-5 py-4">
-
-                                  <span
-                                    className={`inline-flex rounded-lg px-3 py-1.5 text-xs font-bold ${
-                                      producto.estado
-                                        ? "bg-[#E5EAD9] text-[#40552B]"
-                                        : "bg-[#EAD9D9] text-[#7F0303]"
-                                    }`}
-                                  >
-                                    {producto.estado
-                                      ? "Activo"
-                                      : "Inactivo"}
-                                  </span>
-
-                                </td>
-
-                                <td className="px-5 py-4">
-
-                                  <div className="flex flex-wrap gap-2">
-
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        abrirEditarProducto(
-                                          producto
-                                        )
-                                      }
-                                      className="rounded-lg bg-[#D4AF37] px-3 py-2 text-xs font-bold text-[#4A0505] transition hover:bg-[#C29D26]"
-                                    >
-                                      Editar
-                                    </button>
-
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        cambiarEstadoProducto(
-                                          producto
-                                        )
-                                      }
-                                      className="rounded-lg border border-[#7F0303] px-3 py-2 text-xs font-bold text-[#7F0303] transition hover:bg-[#7F0303] hover:text-white"
-                                    >
-                                      {producto.estado
-                                        ? "Desactivar"
-                                        : "Activar"}
-                                    </button>
-
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        eliminarProducto(
-                                          producto
-                                        )
-                                      }
-                                      className="rounded-lg bg-[#7F0303] px-3 py-2 text-xs font-bold text-white transition hover:bg-[#5F0202]"
-                                    >
-                                      Eliminar
-                                    </button>
-
-                                  </div>
-
-                                </td>
-
-                              </tr>
-
-                            ))
-
-                        )}
-
-                      </tbody>
+              <button
+                type="button"
+                onClick={() => eliminarCliente(cliente)}
+                className="rounded-lg bg-[#7F0303] px-3 py-2 text-xs font-bold text-white transition hover:bg-[#5F0202]"
+              >
+                Eliminar
+              </button>
+            </div>
+          </td>
+        </tr>
+      ))
+  )}
+</tbody>
 
                     </table>
 
@@ -3418,8 +3399,9 @@ const datosVentasPorDia = Object.values(
           </div>
 
         </div>
+        </div>
 
-      </div>
+
 
       {/* =====================================================
           MODAL CLIENTE

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 
-function RecuperarContrasena() {
+function RecuperarContrasena({ correoInicial, onBack }) {
 
   const navigate = useNavigate();
 
@@ -10,7 +10,7 @@ function RecuperarContrasena() {
   // ESTADOS
   // ==========================================================
 
-  const [correo, setCorreo] = useState("");
+  const [correo, setCorreo] = useState(correoInicial || "");
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
 
@@ -18,24 +18,22 @@ function RecuperarContrasena() {
   // VALIDAR CORREO
   // ==========================================================
 
-  const validarCorreo = (valor) => {
+ const validarCorreo = (valor) => {
+  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!valor.trim()) {
+    setError("El correo es obligatorio.");
+    return false;
+  }
 
-    if (!valor.trim()) {
-      setError("El correo es obligatorio.");
-      return false;
-    }
+  if (!regex.test(valor)) {
+    setError("Ingresa un correo válido.");
+    return false;
+  }
 
-    if (!regex.test(valor)) {
-      setError("Ingresa un correo válido.");
-      return false;
-    }
-
-    setError("");
-
-    return true;
-  };
+  setError("");
+  return true;
+};
 
   // ==========================================================
   // CAMBIO DEL CORREO
@@ -55,58 +53,58 @@ function RecuperarContrasena() {
   // ==========================================================
   // ENVIAR FORMULARIO
   // ==========================================================
-const handleSubmit = async (e) => {
-  e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  if (!validarCorreo(correo)) {
-    return;
-  }
-
-  setError("");
-  setMensaje("");
-
-  try {
-    const respuesta = await fetch(
-      `${import.meta.env.VITE_API_URL}/auth/recuperar`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: correo.trim().toLowerCase(),
-        }),
-      }
-    );
-
-    const datos = await respuesta.json();
-
-    console.log("=================================");
-    console.log("RESPUESTA RECUPERACIÓN");
-    console.log(datos);
-    console.log("=================================");
-
-    if (!respuesta.ok) {
-      setError(
-        datos.detail ||
-          datos.message ||
-          "No se pudo enviar el correo de recuperación."
-      );
+    if (!validarCorreo(correo)) {
       return;
     }
 
-    setMensaje(
-      datos.message ||
-        `Hemos enviado instrucciones de recuperación a ${correo}`
-    );
-  } catch (error) {
-    console.error("Error en recuperación:", error);
+    setError("");
+    setMensaje("");
 
-    setError(
-      "No se pudo conectar con el servidor. Verifica que el backend esté ejecutándose."
-    );
-  }
-};
+    try {
+      const respuesta = await fetch(
+        `${import.meta.env.VITE_API_URL}/auth/recuperar`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: correo.trim().toLowerCase(),
+          }),
+        }
+      );
+
+      const datos = await respuesta.json();
+
+      console.log("=================================");
+      console.log("RESPUESTA RECUPERACIÓN");
+      console.log(datos);
+      console.log("=================================");
+
+      if (!respuesta.ok) {
+        setError(
+          datos.detail ||
+          datos.message ||
+          "No se pudo enviar el correo de recuperación."
+        );
+        return;
+      }
+
+      setMensaje(
+        datos.message ||
+        `Hemos enviado instrucciones de recuperación a ${correo}`
+      );
+    } catch (error) {
+      console.error("Error en recuperación:", error);
+
+      setError(
+        "No se pudo conectar con el servidor. Verifica que el backend esté ejecutándose."
+      );
+    }
+  };
   // ==========================================================
   // VOLVER AL LOGIN
   // ==========================================================
@@ -336,34 +334,25 @@ const handleSubmit = async (e) => {
               VOLVER
           ================================================== */}
 
+
           <button
             type="button"
-            onClick={volverLogin}
-
+            onClick={() => navigate("/")}
             className="
-              mb-8
-
-              self-start
-
-              text-sm
-
-              font-semibold
-
-              text-[#765E52]
-
-              transition-all
-              duration-300
-
-              hover:text-[#7F0303]
-
-              dark:text-[#C8B9B5]
-
-              dark:hover:text-[#D4AF37]
-            "
+    mb-8
+    self-start
+    text-sm
+    font-semibold
+    text-[#765E52]
+    transition-all
+    duration-300
+    hover:text-[#7F0303]
+    dark:text-[#C8B9B5]
+    dark:hover:text-[#D4AF37]
+  "
           >
-            ← Volver al inicio de sesión
+            ← Volver al inicio
           </button>
-
 
           <div className="max-w-xl">
 
@@ -482,10 +471,9 @@ const handleSubmit = async (e) => {
 
                     border
 
-                    ${
-                      error
-                        ? "border-[#7F0303]"
-                        : "border-[#D8BA98]"
+                    ${error
+                      ? "border-[#7F0303]"
+                      : "border-[#D8BA98]"
                     }
 
                     bg-[#F8F3EA]

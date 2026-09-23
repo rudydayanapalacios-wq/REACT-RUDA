@@ -45,6 +45,12 @@ function App() {
     location.pathname.startsWith("/cliente") ||
     location.pathname.startsWith("/empleado");
 
+  const ocultarBotones =
+    location.pathname === "/login" ||
+    location.pathname.startsWith("/admin") ||
+    location.pathname.startsWith("/cliente") ||
+    location.pathname.startsWith("/empleado");
+
   return (
     <div className="min-h-screen bg-[#EFE8DF]">
 
@@ -324,10 +330,9 @@ function App() {
       {!ocultarLayout && <Footer />}
 
       {/* WHATSAPP */}
-      <WhatsAppButton />
-
-          <Chatbot />
-
+      {/* WHATSAPP Y CHATBOT */}
+      {!ocultarBotones && <WhatsAppButton />}
+      {!ocultarBotones && <Chatbot />}
 
     </div>
   );
