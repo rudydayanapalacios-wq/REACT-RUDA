@@ -15,6 +15,7 @@ import Admin from "./pages/Admin";
 import Empleado from "./pages/Empleado";
 import EmpleadoProductos from "./pages/EmpleadoProductos";
 import EmpleadoPQR from "./pages/EmpleadoPQR";
+import EmpleadoCompras from "./pages/EmpleadoCompras";
 
 import Cliente from "./pages/Cliente";
 import ClienteVentas from "./pages/ClienteVentas";
@@ -210,6 +211,16 @@ function App() {
             element={
               <RutaProtegida rolPermitido={3}>
                 <Empleado />
+              </RutaProtegida>
+            }
+          />
+
+
+          <Route
+            path="/empleado-compras"
+            element={
+              <RutaProtegida rolesPermitidos={[3]}>
+                <EmpleadoCompras />
               </RutaProtegida>
             }
           />

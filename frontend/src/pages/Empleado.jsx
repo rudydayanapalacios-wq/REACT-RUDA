@@ -1788,6 +1788,15 @@ function Empleado() {
                   Perfil
                 </button>
 
+                <button
+  type="button"
+  onClick={() => navigate("/empleado-compras")}
+  className="flex w-full items-center justify-center gap-2 rounded-full border border-[#D8BA98] bg-white/60 px-5 py-3 text-sm font-bold text-[#7F0303] transition hover:-translate-y-0.5 hover:border-[#D4AF37] hover:bg-[#D4AF37] hover:text-white dark:border-[#D4AF37]/20 dark:bg-[#241415] dark:text-[#D4AF37] sm:w-auto"
+>
+  <ShoppingBag size={17} />
+  Compras
+</button>
+
               </div>
 
             </div>
