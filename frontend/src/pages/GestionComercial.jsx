@@ -257,6 +257,50 @@ export default function GestionComercial() {
     ).toLocaleString("es-CO")}`;
   };
 
+  const obtenerNombreDetalle = (detalle) => {
+    const producto = detalle?.producto;
+
+    if (producto && typeof producto === "object") {
+      return (
+        producto.nombre ||
+        producto.nombre_producto ||
+        detalle?.producto_nombre ||
+        "Producto"
+      );
+    }
+
+    return (
+      producto ||
+      detalle?.producto_nombre ||
+      detalle?.nombre_producto ||
+      "Producto"
+    );
+  };
+
+  const obtenerCategoriaDetalle = (detalle) => {
+    if (detalle?.categoria) {
+      return detalle.categoria;
+    }
+
+    if (detalle?.producto && typeof detalle.producto === "object") {
+      return detalle.producto.categoria || "";
+    }
+
+    return "";
+  };
+
+  const obtenerDescripcionDetalle = (detalle) => {
+    if (detalle?.descripcion) {
+      return detalle.descripcion;
+    }
+
+    if (detalle?.producto && typeof detalle.producto === "object") {
+      return detalle.producto.descripcion || "";
+    }
+
+    return "";
+  };
+
   // ============================================================
   // OBTENER FECHA YYYY-MM-DD
   // ============================================================
@@ -2028,7 +2072,7 @@ export default function GestionComercial() {
                                 venta
                               )
                             }
-                            className="flex h-[42px] items-center gap-2 rounded-xl border border-[#7F0303] bg-white px-4 text-xs font-bold text-[#7F0303] transition hover:bg-[#7F0303] hover:text-white"
+                            className="flex h-[42px] w-40 items-center justify-center gap-2 rounded-xl border border-[#7F0303] bg-white px-4 text-xs font-bold text-[#7F0303] transition hover:bg-[#7F0303] hover:text-white"
                           >
                             <Eye
                               size={16}
@@ -2048,7 +2092,7 @@ export default function GestionComercial() {
                             disabled={
                               estaDescargando
                             }
-                            className="flex h-[42px] items-center gap-2 rounded-xl bg-[#7F0303] px-4 text-xs font-bold text-white shadow-sm transition hover:bg-[#5F0202] disabled:cursor-not-allowed disabled:opacity-60"
+                            className="flex h-[42px] w-40 items-center justify-center gap-2 rounded-xl bg-[#7F0303] px-4 text-xs font-bold text-white shadow-sm transition hover:bg-[#5F0202] disabled:cursor-not-allowed disabled:opacity-60"
                           >
 
                             {estaDescargando ? (
@@ -2209,7 +2253,7 @@ export default function GestionComercial() {
             </div>
 
             <div className="space-y-6 p-6 sm:p-8">
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-4">
                 <div className="rounded-xl border border-[#D8BA98] bg-white p-4">
                   <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Cliente</p>
                   <p className="mt-1 font-semibold text-[#2C1B1B]">{obtenerCliente(ventaDetalle)}</p>
@@ -2221,6 +2265,12 @@ export default function GestionComercial() {
                 <div className="rounded-xl border border-[#D8BA98] bg-white p-4">
                   <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Estado</p>
                   <p className="mt-1 font-semibold text-[#40552B]">{ventaDetalle.estado || "Venta registrada"}</p>
+                </div>
+                <div className="rounded-xl border border-[#D8BA98] bg-white p-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-[#927E70]">Unidades</p>
+                  <p className="mt-1 font-semibold text-[#2C1B1B]">
+                    {(ventaDetalle.detalles || []).reduce((cantidad, detalleVenta) => cantidad + Number(detalleVenta.cantidad || 0), 0)}
+                  </p>
                 </div>
               </div>
 
@@ -2237,14 +2287,36 @@ export default function GestionComercial() {
                   ) : (
                     <div className="divide-y divide-[#EFE8DF]">
                       {ventaDetalle.detalles.map((detalleVenta, detalleIndex) => (
-                        <div key={detalleIndex} className="flex flex-wrap items-center justify-between gap-4 p-4">
-                          <div>
-                            <p className="font-semibold text-[#2C1B1B]">{detalleVenta.producto || "Producto"}</p>
-                            <p className="mt-1 text-xs text-[#927E70]">
-                              Cantidad: {detalleVenta.cantidad || 0} · Valor unitario: {formatearPrecio(detalleVenta.precio_unitario)}
+                        <div key={detalleIndex} className="space-y-3 p-4">
+                          <div className="flex flex-wrap items-start justify-between gap-4">
+                            <div>
+                              <p className="font-semibold text-[#2C1B1B]">
+                                {obtenerNombreDetalle(detalleVenta)}
+                              </p>
+                              <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold text-[#765E52]">
+                                <span className="rounded-full bg-[#EFE8DF] px-3 py-1">
+                                  Cantidad: {detalleVenta.cantidad || 0}
+                                </span>
+                                <span className="rounded-full bg-[#EFE8DF] px-3 py-1">
+                                  Unitario: {formatearPrecio(detalleVenta.precio_unitario)}
+                                </span>
+                                {obtenerCategoriaDetalle(detalleVenta) && (
+                                  <span className="rounded-full bg-[#D4AF37]/20 px-3 py-1 text-[#7F0303]">
+                                    {obtenerCategoriaDetalle(detalleVenta)}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <p className="font-bold text-[#7F0303]">
+                              {formatearPrecio(detalleVenta.subtotal)}
                             </p>
                           </div>
-                          <p className="font-bold text-[#7F0303]">{formatearPrecio(detalleVenta.subtotal)}</p>
+
+                          {obtenerDescripcionDetalle(detalleVenta) && (
+                            <p className="rounded-xl bg-[#FFF9F0] p-3 text-sm leading-relaxed text-[#765E52]">
+                              {obtenerDescripcionDetalle(detalleVenta)}
+                            </p>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -2262,14 +2334,14 @@ export default function GestionComercial() {
               <button
                 type="button"
                 onClick={() => setVentaDetalle(null)}
-                className="rounded-xl border border-[#D8BA98] px-5 py-3 text-sm font-bold text-[#7F0303] transition hover:bg-[#EFE8DF]"
+                className="flex w-full items-center justify-center rounded-xl border border-[#D8BA98] px-5 py-3 text-sm font-bold text-[#7F0303] transition hover:bg-[#EFE8DF] sm:w-44"
               >
                 Cerrar detalle
               </button>
               <button
                 type="button"
                 onClick={() => descargarPDF(ventaDetalle)}
-                className="flex items-center justify-center gap-2 rounded-xl bg-[#7F0303] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#5F0202]"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#7F0303] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#5F0202] sm:w-44"
               >
                 <Download size={16} />
                 Descargar PDF
