@@ -1229,28 +1229,78 @@ const guardarProducto = async (e) => {
       (cliente) => cliente.estado
     ).length;
 
-  const productosActivos =
-    productos.filter(
+    const productosActivos = productos.filter(
       (producto) => producto.estado
     ).length;
 
+    const obtenerFechaVentaDashboard = (venta) =>
+      venta?.fecha || venta?.fecha_venta || venta?.created_at || venta?.createdAt || "";
 
-    // ============================================================
-// DATOS DEL DASHBOARD DE VENTAS - EST11
-// ============================================================
+    const obtenerClienteVentaDashboard = (venta) => {
+      const cliente = venta?.cliente || venta?.usuario;
 
-const ingresosVentasDashboard = ventas.reduce(
-  (total, venta) =>
-    total + (Number(venta?.total) || 0),
-  0
-);
+      if (typeof cliente === "string") return cliente;
 
-const ticketPromedioDashboard =
-  totalVentas > 0
-    ? ingresosVentasDashboard / totalVentas
-    : 0;
+      if (cliente && typeof cliente === "object") {
+        return `${cliente.nombres || cliente.nombre || ""} ${cliente.apellidos || ""} ${cliente.email || ""}`;
+      }
 
-const ventasPorDia = ventas.reduce(
+      return `${venta?.nombre_cliente || venta?.cliente_nombre || ""} ${venta?.email || ""}`;
+    };
+
+    const obtenerProductosVentaDashboard = (venta) =>
+      (venta?.detalles || venta?.detalle || venta?.items || [])
+        .map((detalle) => {
+          if (typeof detalle?.producto === "object") {
+            return detalle.producto.nombre || detalle.producto.nombre_producto || "";
+          }
+
+          return detalle?.producto || detalle?.producto_nombre || detalle?.nombre_producto || "";
+        })
+        .join(" ");
+
+    const ventasFiltradasDashboard = ventas.filter((venta) => {
+      const fecha = String(obtenerFechaVentaDashboard(venta)).slice(0, 10);
+      const textoProducto = obtenerProductosVentaDashboard(venta).toLowerCase();
+      const textoCliente = obtenerClienteVentaDashboard(venta).toLowerCase();
+      const estado = String(venta?.estado || "").toLowerCase();
+
+      return (
+        (!filtroFechaInicioDashboard || fecha >= filtroFechaInicioDashboard) &&
+        (!filtroFechaFinDashboard || fecha <= filtroFechaFinDashboard) &&
+        (!filtroProductoDashboard || textoProducto.includes(filtroProductoDashboard.trim().toLowerCase())) &&
+        (!filtroEstadoDashboard || estado === filtroEstadoDashboard.toLowerCase()) &&
+        (!filtroClienteDashboard || textoCliente.includes(filtroClienteDashboard.trim().toLowerCase()))
+      );
+    });
+
+    const totalVentasDashboard = ventasFiltradasDashboard.length;
+    const totalFacturasDashboard = ventasFiltradasDashboard.filter(
+      (venta) => venta?.numero_factura || venta?.factura || venta?.numeroFactura
+    ).length;
+
+    const hayFiltrosDashboard = Boolean(
+      filtroFechaInicioDashboard || filtroFechaFinDashboard || filtroProductoDashboard || filtroEstadoDashboard || filtroClienteDashboard
+    );
+
+    const limpiarFiltrosDashboard = () => {
+      setFiltroFechaInicioDashboard("");
+      setFiltroFechaFinDashboard("");
+      setFiltroProductoDashboard("");
+      setFiltroEstadoDashboard("");
+      setFiltroClienteDashboard("");
+    };
+
+    const ingresosVentasDashboard = ventasFiltradasDashboard.reduce(
+      (total, venta) => total + (Number(venta?.total) || 0),
+      0
+    );
+
+    const ticketPromedioDashboard = totalVentasDashboard > 0
+      ? ingresosVentasDashboard / totalVentasDashboard
+      : 0;
+
+    const ventasPorDia = ventasFiltradasDashboard.reduce(
   (acumulado, venta) => {
     if (!venta?.fecha) return acumulado;
 
@@ -2451,6 +2501,91 @@ return (
     </p>
   </div>
 
+  <div className="mb-6 rounded-[24px] border border-[#D8BA98] bg-[#FFF9F0] p-5 shadow-sm">
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h3 className="text-base font-bold text-[#7F0303]">Filtrar gráficos</h3>
+        <p className="mt-1 text-xs text-[#765E52]">
+          Los indicadores y gráficos se actualizan con los filtros seleccionados.
+        </p>
+      </div>
+
+      {hayFiltrosDashboard && (
+        <button
+          type="button"
+          onClick={limpiarFiltrosDashboard}
+          className="rounded-xl border border-[#D8BA98] bg-white px-4 py-2 text-xs font-bold text-[#7F0303] transition hover:border-[#D4AF37] hover:bg-[#D4AF37]/10"
+        >
+          Limpiar filtros
+        </button>
+      )}
+    </div>
+
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <label className="text-xs font-bold text-[#765E52]">
+        Desde
+        <input
+          type="date"
+          value={filtroFechaInicioDashboard}
+          onChange={(evento) => setFiltroFechaInicioDashboard(evento.target.value)}
+          className="mt-1 h-10 w-full rounded-xl border border-[#D8BA98] bg-white px-3 text-sm font-normal text-[#3D1717] outline-none focus:border-[#7F0303]"
+        />
+      </label>
+
+      <label className="text-xs font-bold text-[#765E52]">
+        Hasta
+        <input
+          type="date"
+          value={filtroFechaFinDashboard}
+          onChange={(evento) => setFiltroFechaFinDashboard(evento.target.value)}
+          className="mt-1 h-10 w-full rounded-xl border border-[#D8BA98] bg-white px-3 text-sm font-normal text-[#3D1717] outline-none focus:border-[#7F0303]"
+        />
+      </label>
+
+      <label className="text-xs font-bold text-[#765E52]">
+        Producto
+        <select
+          value={filtroProductoDashboard}
+          onChange={(evento) => setFiltroProductoDashboard(evento.target.value)}
+          className="mt-1 h-10 w-full rounded-xl border border-[#D8BA98] bg-white px-3 text-sm font-normal text-[#3D1717] outline-none focus:border-[#7F0303]"
+        >
+          <option value="">Todos</option>
+          {productos.map((producto) => (
+            <option key={producto.id} value={producto.nombre}>
+              {producto.nombre}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="text-xs font-bold text-[#765E52]">
+        Estado
+        <select
+          value={filtroEstadoDashboard}
+          onChange={(evento) => setFiltroEstadoDashboard(evento.target.value)}
+          className="mt-1 h-10 w-full rounded-xl border border-[#D8BA98] bg-white px-3 text-sm font-normal capitalize text-[#3D1717] outline-none focus:border-[#7F0303]"
+        >
+          <option value="">Todos</option>
+          <option value="confirmada">Confirmada</option>
+          <option value="pendiente">Pendiente</option>
+          <option value="cancelada">Cancelada</option>
+          <option value="completada">Completada</option>
+        </select>
+      </label>
+
+      <label className="text-xs font-bold text-[#765E52]">
+        Cliente
+        <input
+          type="search"
+          value={filtroClienteDashboard}
+          onChange={(evento) => setFiltroClienteDashboard(evento.target.value)}
+          placeholder="Nombre o correo"
+          className="mt-1 h-10 w-full rounded-xl border border-[#D8BA98] bg-white px-3 text-sm font-normal text-[#3D1717] outline-none placeholder:text-[#927E70] focus:border-[#7F0303]"
+        />
+      </label>
+    </div>
+  </div>
+
   <div className="grid gap-5 md:grid-cols-3">
     {/* TOTAL DE VENTAS */}
     <div className="rounded-[24px] border border-[#D8BA98] bg-[#F8F3EA] p-5 shadow-sm">
@@ -2461,7 +2596,7 @@ return (
           </p>
 
           <p className="mt-2 text-3xl font-black text-[#241415]">
-            {cargandoVentas ? "..." : totalVentas}
+            {cargandoVentas ? "..." : totalVentasDashboard}
           </p>
         </div>
 
