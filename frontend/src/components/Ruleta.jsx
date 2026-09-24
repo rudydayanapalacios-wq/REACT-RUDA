@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useCarrito } from "../context/CarritoContext";
 
 const API_URL = import.meta.env.VITE_API_URL;
+console.log("API_URL DE RULETA:", API_URL);
 
 function Ruleta() {
   const navigate = useNavigate();
@@ -49,7 +50,7 @@ function Ruleta() {
       setCargando(true);
       setError("");
 
-      const respuesta = await fetch(`${API_URL}/productos`, {
+      const respuesta = await fetch(`${API_URL}/productos/`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",

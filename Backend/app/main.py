@@ -1,8 +1,11 @@
 from fastapi import FastAPI
+
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import Base, engine
+
 from .routes import auth, productos, usuarios, ventas, pqr, chatbot
+
 
 # ==========================================================
 # CREAR TABLAS
@@ -27,27 +30,17 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-allow_origins=[
-    "http://localhost:5173",
-    "https://mugi-store-8tjzrr75u-rudy-05c0.vercel.app",
-],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)# ==========================================================
-# CORS
-# ==========================================================
-
-app.add_middleware(
-    CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
+        "https://mugi-store-8tjzrr75u-rudy-05c0.vercel.app",
     ],
     allow_origin_regex=r"https://mugi-store-[a-z0-9]+-rudy-05c0\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
 # ==========================================================
 # RUTAS
 # ==========================================================
@@ -74,7 +67,8 @@ app.include_router(
 
 app.include_router(
     chatbot.router
-    )
+)
+
 
 # ==========================================================
 # RUTA PRINCIPAL
@@ -82,6 +76,7 @@ app.include_router(
 
 @app.get("/")
 def inicio():
+
     return {
         "success": True,
         "message": "API funcionando correctamente"
