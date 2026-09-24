@@ -13,6 +13,7 @@ import {
 
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import EstructuraPanel from "../components/EstructuraPanel";
 
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -1292,7 +1293,11 @@ export default function GestionComercial() {
   // ============================================================
 
   return (
-    <main className="min-h-screen bg-[#EFE8DF] px-4 py-8 sm:px-8">
+    <EstructuraPanel
+      rol={esEmpleado ? "empleado" : "administrador"}
+      titulo={esEmpleado ? "Empleado" : "Administrador"}
+    >
+      <main className="min-h-screen bg-[#EFE8DF] px-4 py-8 sm:px-8">
       <div className="mx-auto max-w-6xl">
 
         {/* ======================================================
@@ -2273,6 +2278,7 @@ export default function GestionComercial() {
           </div>
         </div>
       )}
-    </main>
+      </main>
+    </EstructuraPanel>
   );
 }

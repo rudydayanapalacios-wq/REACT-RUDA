@@ -8,10 +8,12 @@ import {
   FileText,
   Package,
   RefreshCw,
+  Download,
 } from "lucide-react";
 
 import EstructuraPanel from "../components/EstructuraPanel";
 import { useAuth } from "../context/AuthContext";
+import { generarFacturaPDF } from "../utils/generarFacturaPDF";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -22,6 +24,8 @@ export default function EmpleadoCompras() {
   const [ventas, setVentas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+  const COMPRAS_POR_PAGINA = 6;
+  const [paginaActual, setPaginaActual] = useState(1);
 
   const cargarVentas = async () => {
     if (!token) {
@@ -53,6 +57,7 @@ export default function EmpleadoCompras() {
       }
 
       setVentas(Array.isArray(datos) ? datos : []);
+      setPaginaActual(1);
     } catch (error) {
       console.error("Error cargando compras:", error);
 
@@ -120,6 +125,20 @@ export default function EmpleadoCompras() {
 
     navigate(`/factura/${ventaId}`);
   };
+
+  const descargarFactura = async (venta) => {
+    await generarFacturaPDF(venta);
+  };
+
+  const totalPaginas = Math.max(
+    1,
+    Math.ceil(ventas.length / COMPRAS_POR_PAGINA)
+  );
+
+  const ventasPaginadas = ventas.slice(
+    (paginaActual - 1) * COMPRAS_POR_PAGINA,
+    paginaActual * COMPRAS_POR_PAGINA
+  );
 
   return (
     <EstructuraPanel rol="empleado" titulo="Empleado">
@@ -273,7 +292,7 @@ export default function EmpleadoCompras() {
                 ventas.length > 0 && (
                   <div className="space-y-4">
 
-                    {ventas.map((venta) => {
+                    {ventasPaginadas.map((venta) => {
                       const ventaId = obtenerIdVenta(venta);
                       const numeroFactura =
                         obtenerNumeroFactura(venta);
@@ -389,14 +408,25 @@ export default function EmpleadoCompras() {
                                 </div>
                               </div>
 
-                              <button
-                                type="button"
-                                onClick={() => verFactura(venta)}
-                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#7F0303] px-5 py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#5F0202]"
-                              >
-                                <Eye size={17} />
-                                Ver factura
-                              </button>
+                              <div className="flex flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => verFactura(venta)}
+                                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#7F0303] px-5 py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#5F0202]"
+                                >
+                                  <Eye size={17} />
+                                  Ver factura
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => descargarFactura(venta)}
+                                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#7F0303] px-5 py-3 text-sm font-bold text-[#7F0303] transition hover:bg-[#F8EDE7]"
+                                >
+                                  <Download size={17} />
+                                  Descargar PDF
+                                </button>
+                              </div>
 
                             </div>
                           </div>
@@ -406,6 +436,43 @@ export default function EmpleadoCompras() {
 
                   </div>
                 )}
+
+              {!cargando && !error && totalPaginas > 1 && (
+                <div className="mt-8 flex flex-wrap items-center justify-center gap-2 border-t border-[#D8BA98]/50 pt-6">
+                  <button
+                    type="button"
+                    disabled={paginaActual === 1}
+                    onClick={() => setPaginaActual((pagina) => pagina - 1)}
+                    className="rounded-xl border border-[#D8BA98] px-4 py-2 text-sm font-semibold text-[#7F0303] transition hover:border-[#D4AF37] hover:bg-[#F8F3EA] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    ← Anterior
+                  </button>
+
+                  {Array.from({ length: totalPaginas }, (_, index) => index + 1).map((pagina) => (
+                    <button
+                      key={pagina}
+                      type="button"
+                      onClick={() => setPaginaActual(pagina)}
+                      className={`h-10 w-10 rounded-xl text-sm font-bold transition ${
+                        pagina === paginaActual
+                          ? "bg-[#D4AF37] text-[#4A0505]"
+                          : "border border-[#D8BA98] bg-[#F8F3EA] text-[#7F0303] hover:border-[#D4AF37]"
+                      }`}
+                    >
+                      {pagina}
+                    </button>
+                  ))}
+
+                  <button
+                    type="button"
+                    disabled={paginaActual === totalPaginas}
+                    onClick={() => setPaginaActual((pagina) => pagina + 1)}
+                    className="rounded-xl border border-[#D8BA98] px-4 py-2 text-sm font-semibold text-[#7F0303] transition hover:border-[#D4AF37] hover:bg-[#F8F3EA] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Siguiente →
+                  </button>
+                </div>
+              )}
 
             </div>
           </div>

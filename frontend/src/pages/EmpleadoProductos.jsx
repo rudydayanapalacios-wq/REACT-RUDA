@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { X } from "lucide-react";
+import EstructuraPanel from "../components/EstructuraPanel";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -116,7 +117,8 @@ function EmpleadoProductos() {
   // ============================================================
 
   return (
-    <section className="h-screen overflow-y-auto bg-[#EFE8DF] px-6 py-12">
+    <EstructuraPanel rol="empleado" titulo="Empleado">
+      <section className="min-h-screen bg-[#EFE8DF] px-6 py-12">
       <div className="mx-auto max-w-7xl">
 
         {/* ======================================================
@@ -572,7 +574,8 @@ function EmpleadoProductos() {
           </div>
         </div>
       )}
-    </section>
+      </section>
+    </EstructuraPanel>
   );
 }
 
