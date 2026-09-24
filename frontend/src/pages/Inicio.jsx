@@ -276,8 +276,8 @@ function Inicio() {
                     $89.900
                   </span>
 
-                  <button
-                    type="button"
+                  <Link
+                    to="/productos"
                     className="
                       rounded-full
                       bg-[#7F0303]
@@ -296,7 +296,7 @@ function Inicio() {
                     "
                   >
                     Ver más
-                  </button>
+                  </Link>
                 </div>
               </div>
             </article>
@@ -394,8 +394,8 @@ function Inicio() {
                     $129.900
                   </span>
 
-                  <button
-                    type="button"
+                  <Link
+                    to="/productos"
                     className="
                       rounded-full
                       bg-[#7F0303]
@@ -414,7 +414,7 @@ function Inicio() {
                     "
                   >
                     Ver más
-                  </button>
+                  </Link>
                 </div>
               </div>
             </article>
@@ -512,8 +512,8 @@ function Inicio() {
                     $74.900
                   </span>
 
-                  <button
-                    type="button"
+                  <Link
+                    to="/productos"
                     className="
                       rounded-full
                       bg-[#7F0303]
@@ -532,7 +532,7 @@ function Inicio() {
                     "
                   >
                     Ver más
-                  </button>
+                  </Link>
                 </div>
               </div>
             </article>

@@ -1,8 +1,14 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { useCarrito } from "../context/CarritoContext";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
 function Ruleta() {
+  const navigate = useNavigate();
+  const { autenticado } = useAuth();
+  const { agregarAlCarrito } = useCarrito();
   const [productos, setProductos] = useState([]);
   const [indice, setIndice] = useState(0);
   const [cargando, setCargando] = useState(true);
@@ -121,6 +127,40 @@ function Ruleta() {
     setIndice(
       (prev) => (prev - 1 + productos.length) % productos.length
     );
+  };
+
+  const comprar = () => {
+    const producto = {
+      id: actual.id || actual._id,
+      nombre: actual.nombre || actual.titulo || actual.name || "Producto MUGI",
+      descripcion: actual.descripcion || actual.description || "",
+      precio: Number(actual.precio ?? actual.price ?? 0),
+      imagen: obtenerRutaImagen(
+        actual.imagen ||
+          actual.imagen_url ||
+          actual.image ||
+          actual.imageUrl ||
+          actual.foto ||
+          ""
+      ),
+      stock: Number(actual.stock ?? actual.cantidad ?? 0),
+    };
+
+    if (producto.stock <= 0) {
+      alert("Este producto no tiene stock disponible.");
+      return;
+    }
+
+    if (!autenticado) {
+      localStorage.setItem(
+        "productoPendienteMugi",
+        JSON.stringify({ ...producto, cantidad: 1 })
+      );
+      navigate("/login");
+      return;
+    }
+
+    agregarAlCarrito(producto);
   };
 
   // ============================================================
@@ -442,6 +482,7 @@ function Ruleta() {
 
             <button
               type="button"
+              onClick={comprar}
               className="
                 rounded-full
                 border
