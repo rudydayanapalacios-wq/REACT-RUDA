@@ -16,8 +16,10 @@ import {
   ShoppingBag,
   CircleDollarSign,
   MessageCircle,
+  Download,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { generarFacturaPDF } from "../utils/generarFacturaPDF";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -316,6 +318,10 @@ function Cliente() {
     }
 
     navigate(`/factura/${ventaId}`);
+  };
+
+  const descargarFactura = async (venta) => {
+    await generarFacturaPDF(venta);
   };
 
   // ============================================================
@@ -1005,18 +1011,33 @@ function Cliente() {
                                   </div>
                                 </div>
 
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    verFactura(
-                                      venta
-                                    )
-                                  }
-                                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#7F0303] px-5 py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#5F0202]"
-                                >
-                                  <Eye size={17} />
-                                  Ver factura
-                                </button>
+                                <div className="flex flex-wrap gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      verFactura(
+                                        venta
+                                      )
+                                    }
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#7F0303] px-5 py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#5F0202]"
+                                  >
+                                    <Eye size={17} />
+                                    Ver factura
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      descargarFactura(
+                                        venta
+                                      )
+                                    }
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#7F0303] px-5 py-3 text-sm font-bold text-[#7F0303] transition hover:bg-[#F8EDE7]"
+                                  >
+                                    <Download size={17} />
+                                    Descargar PDF
+                                  </button>
+                                </div>
 
                               </div>
                             </div>
