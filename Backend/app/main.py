@@ -32,13 +32,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
-
-        # Vercel
         "https://mugi-store.vercel.app",
-        "https://mugi-store-git-main-rudy-05c0.vercel.app",
-        "https://mugi-store-1wmwvu08y-rudy-05c0.vercel.app",
-        "https://mugi-store-8tjzrr75u-rudy-05c0.vercel.app",
     ],
+    allow_origin_regex=r"https://mugi-store(?:-[a-z0-9-]+)?-rudy-05c0\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
