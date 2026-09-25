@@ -23,7 +23,22 @@ import { generarFacturaPDF } from "../utils/generarFacturaPDF";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-export default function GestionComercial() {
+function ContenedorGestion({ mostrarEstructura, esEmpleado, children }) {
+  if (!mostrarEstructura) {
+    return children;
+  }
+
+  return (
+    <EstructuraPanel
+      rol={esEmpleado ? "empleado" : "administrador"}
+      titulo={esEmpleado ? "Empleado" : "Administrador"}
+    >
+      {children}
+    </EstructuraPanel>
+  );
+}
+
+export default function GestionComercial({ mostrarEstructura = true }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { token, usuario } = useAuth();
@@ -1337,9 +1352,9 @@ export default function GestionComercial() {
   // ============================================================
 
   return (
-    <EstructuraPanel
-      rol={esEmpleado ? "empleado" : "administrador"}
-      titulo={esEmpleado ? "Empleado" : "Administrador"}
+    <ContenedorGestion
+      mostrarEstructura={mostrarEstructura}
+      esEmpleado={esEmpleado}
     >
       <main className="min-h-screen bg-[#EFE8DF] px-4 py-8 sm:px-8">
       <div className="mx-auto max-w-6xl">
@@ -1379,6 +1394,7 @@ export default function GestionComercial() {
             NAVEGACIÓN
         ====================================================== */}
 
+        {mostrarEstructura && (
         <div className="mb-6 flex flex-wrap gap-2">
 
           {esAdministrador && (
@@ -1459,6 +1475,7 @@ export default function GestionComercial() {
             Ventas
           </button>
         </div>
+        )}
 
         {/* ======================================================
             ERROR
@@ -2351,6 +2368,6 @@ export default function GestionComercial() {
         </div>
       )}
       </main>
-    </EstructuraPanel>
+    </ContenedorGestion>
   );
 }
