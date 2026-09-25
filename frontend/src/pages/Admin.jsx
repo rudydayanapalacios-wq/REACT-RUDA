@@ -1973,35 +1973,11 @@ return (
                 VENTAS
             ================================================== */}
 
-            {vista === "ventas" && (
-              <div className="overflow-hidden">
-
-                <div className="mb-6">
-
-                  <p className="text-xs font-bold uppercase tracking-[0.25em] text-[#D4AF37]">
-                    Comercial
-                  </p>
-
-                  <h1 className="mt-2 font-serif text-3xl font-bold text-[#7F0303] sm:text-4xl">
-                    Ventas
-                  </h1>
-
-                  <p className="mt-2 text-sm text-[#927E70]">
-                    Consulta y administra las operaciones
-                    comerciales de MUGI STORE.
-                  </p>
-
-                </div>
-
-                <div className="rounded-[28px] border border-[#D8BA98] bg-[#F8F3EA] p-1 shadow-sm">
-
-                  <GestionComercial />
-
-                </div>
-
-              </div>
-            )}
-
+       {vista === "ventas" && (
+  <div className="overflow-hidden">
+    <GestionComercial />
+  </div>
+)}
 
 
 
