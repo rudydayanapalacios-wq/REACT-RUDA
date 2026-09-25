@@ -52,9 +52,6 @@ function Ruleta() {
 
       const respuesta = await fetch(`${API_URL}/productos/`, {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
       });
 
       const datos = await respuesta.json();
