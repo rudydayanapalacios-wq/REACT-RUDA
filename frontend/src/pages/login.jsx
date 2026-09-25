@@ -378,22 +378,7 @@ function Login() {
   // RECUPERAR CONTRASEÑA
   // ==========================================================
 const abrirRecuperar = () => {
-  if (!formulario.email.trim()) {
-    setErrores({
-      email: "Primero ingresa tu correo electrónico.",
-    });
-    return;
-  }
-
-  const errorEmail = validarCampo("email", formulario.email);
-
-  if (errorEmail) {
-    setErrores({
-      email: errorEmail,
-    });
-    return;
-  }
-
+  setErrores({});
   setMostrarRecuperar(true);
 };
 
