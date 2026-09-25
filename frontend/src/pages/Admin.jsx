@@ -1975,7 +1975,7 @@ return (
 
        {vista === "ventas" && (
   <div className="overflow-hidden">
-    <GestionComercial />
+    <GestionComercial mostrarEstructura={false} />
   </div>
 )}
 
