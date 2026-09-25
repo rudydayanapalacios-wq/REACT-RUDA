@@ -21,7 +21,7 @@ If you are developing a production application, we recommend using TypeScript wi
 ### Frontend
 El frontend fue desplegado en Vercel:
 
-🔗 https://mugi-store.vercel.app/
+🔗 https://mugi-store-2idaoafv4-rudy-05c0.vercel.app/
 
 ### Backend
 El backend fue desplegado en Railway:
