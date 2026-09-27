@@ -21,9 +21,13 @@ app = FastAPI(title="API Proyecto React")
 # CORS
 # ==========================================================
 origins = [
+    # Frontend local
     "http://localhost:5173",
 
     # Vercel frontend actual
+    "https://mugi-store-nuupzzr6n-rudy-05c0.vercel.app",
+
+    # Vercel frontend anterior
     "https://mugi-store-hmukjd5b0-rudy-05c0.vercel.app",
 
     # Vercel frontend anterior
@@ -56,4 +60,6 @@ app.include_router(chatbot.router)
 # ==========================================================
 @app.get("/")
 def root():
-    return {"mensaje": "API Proyecto React funcionando correctamente"}
+    return {
+        "mensaje": "API Proyecto React funcionando correctamente"
+    }
