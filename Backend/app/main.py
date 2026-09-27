@@ -21,16 +21,14 @@ app = FastAPI(title="API Proyecto React")
 # CORS
 # ==========================================================
 origins = [
-    # Frontend local
     "http://localhost:5173",
 
-    # Vercel frontend actual
+    "https://mugi-store-5mkmkflej-rudy-05c0.vercel.app",
+
     "https://mugi-store-nuupzzr6n-rudy-05c0.vercel.app",
 
-    # Vercel frontend anterior
     "https://mugi-store-hmukjd5b0-rudy-05c0.vercel.app",
 
-    # Vercel frontend anterior
     "https://mugi-store-8tjzrr75u-rudy-05c0.vercel.app",
 ]
 
