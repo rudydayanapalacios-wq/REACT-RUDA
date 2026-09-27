@@ -1,8 +1,7 @@
 import os
 import html
-
+import requests
 from dotenv import load_dotenv
-from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
 
 load_dotenv()
 
@@ -11,29 +10,14 @@ load_dotenv()
 # CONFIGURACIÓN DEL CORREO
 # ============================================================
 
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+MAIL_FROM = os.getenv("MAIL_FROM")
+
 print("====================================")
 print("CONFIGURACIÓN DEL CORREO")
-print("MAIL_USERNAME:", os.getenv("MAIL_USERNAME"))
-print(
-    "MAIL_PASSWORD configurada:",
-    bool(os.getenv("MAIL_PASSWORD"))
-)
-print("MAIL_FROM:", os.getenv("MAIL_FROM"))
-print("MAIL_SERVER:", "smtp.gmail.com")
-print("MAIL_PORT:", 587)
+print("RESEND_API_KEY configurada:", bool(RESEND_API_KEY))
+print("MAIL_FROM:", MAIL_FROM)
 print("====================================")
-
-
-conf = ConnectionConfig(
-    MAIL_USERNAME=os.getenv("MAIL_USERNAME"),
-    MAIL_PASSWORD=os.getenv("MAIL_PASSWORD"),
-    MAIL_FROM=os.getenv("MAIL_FROM"),
-    MAIL_PORT=587,
-    MAIL_SERVER="smtp.gmail.com",
-    MAIL_STARTTLS=True,
-    MAIL_SSL_TLS=False,
-    USE_CREDENTIALS=True,
-)
 
 
 # ============================================================
@@ -64,11 +48,9 @@ async def enviar_correo_recuperacion(
 
     cuerpo_html = f"""
 <!DOCTYPE html>
-
 <html lang="es">
 
 <head>
-
     <meta charset="UTF-8">
 
     <meta
@@ -79,7 +61,6 @@ async def enviar_correo_recuperacion(
     <title>
         Recuperación de contraseña - MUGI STORE
     </title>
-
 </head>
 
 <body style="
@@ -101,369 +82,365 @@ async def enviar_correo_recuperacion(
     "
 >
 
-    <tr>
+<tr>
+<td align="center">
+
+<table
+    width="100%"
+    cellpadding="0"
+    cellspacing="0"
+    border="0"
+    style="
+        max-width: 600px;
+        background-color: #F8F3EA;
+        border: 1px solid #D8BA98;
+        border-radius: 25px;
+        overflow: hidden;
+    "
+>
+
+<!-- ENCABEZADO -->
+
+<tr>
+
+<td
+    align="center"
+    style="
+        background-color: #7F0303;
+        padding: 35px 25px;
+    "
+>
+
+<div style="
+    font-size: 30px;
+    font-weight: bold;
+    letter-spacing: 3px;
+    color: #FFFFFF;
+    margin-bottom: 10px;
+">
+    MUGI STORE
+</div>
+
+<div style="
+    width: 70px;
+    height: 3px;
+    background-color: #D4AF37;
+    margin: 0 auto 15px auto;
+">
+</div>
+
+<div style="
+    font-size: 14px;
+    color: #F8F3EA;
+    letter-spacing: 1px;
+">
+    Tu tienda, tu estilo
+</div>
+
+</td>
+
+</tr>
+
+
+<!-- CONTENIDO -->
+
+<tr>
+
+<td style="padding: 40px 35px;">
+
+<h1 style="
+    margin: 0 0 20px 0;
+    text-align: center;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 28px;
+    color: #7F0303;
+">
+    Recupera tu acceso
+</h1>
+
+
+<p style="
+    margin: 0 0 18px 0;
+    font-size: 16px;
+    line-height: 1.7;
+    color: #765E52;
+">
+    Hola,
+</p>
+
+
+<p style="
+    margin: 0 0 18px 0;
+    font-size: 16px;
+    line-height: 1.7;
+    color: #765E52;
+">
+
+    Recibimos una solicitud para recuperar
+    la contraseña de tu cuenta de
+
+    <strong style="color: #7F0303;">
+        MUGI STORE
+    </strong>.
+
+</p>
 
-        <td align="center">
 
-            <table
-                width="100%"
-                cellpadding="0"
-                cellspacing="0"
-                border="0"
-                style="
-                    max-width: 600px;
-                    background-color: #F8F3EA;
-                    border: 1px solid #D8BA98;
-                    border-radius: 25px;
-                    overflow: hidden;
-                "
-            >
+<p style="
+    margin: 0 0 30px 0;
+    font-size: 16px;
+    line-height: 1.7;
+    color: #765E52;
+">
 
-                <!-- ENCABEZADO -->
+    Para crear una nueva contraseña,
+    haz clic en el siguiente botón:
 
-                <tr>
+</p>
 
-                    <td
-                        align="center"
-                        style="
-                            background-color: #7F0303;
-                            padding: 35px 25px;
-                        "
-                    >
 
-                        <div style="
-                            font-size: 30px;
-                            font-weight: bold;
-                            letter-spacing: 3px;
-                            color: #FFFFFF;
-                            margin-bottom: 10px;
-                        ">
+<!-- BOTÓN -->
 
-                            MUGI STORE
+<table
+    width="100%"
+    cellpadding="0"
+    cellspacing="0"
+    border="0"
+>
 
-                        </div>
+<tr>
 
-                        <div style="
-                            width: 70px;
-                            height: 3px;
-                            background-color: #D4AF37;
-                            margin: 0 auto 15px auto;
-                        ">
-                        </div>
+<td align="center">
 
-                        <div style="
-                            font-size: 14px;
-                            color: #F8F3EA;
-                            letter-spacing: 1px;
-                        ">
+<a
+    href="{enlace_seguro}"
+    style="
+        display: inline-block;
+        background-color: #7F0303;
+        color: #FFFFFF;
+        text-decoration: none;
+        font-size: 16px;
+        font-weight: bold;
+        padding: 15px 35px;
+        border-radius: 12px;
+        border: 2px solid #D4AF37;
+    "
+>
 
-                            Tu tienda, tu estilo
+    Restablecer contraseña
 
-                        </div>
+</a>
 
-                    </td>
+</td>
 
-                </tr>
+</tr>
 
+</table>
 
-                <!-- CONTENIDO -->
 
-                <tr>
+<!-- ENLACE -->
 
-                    <td style="padding: 40px 35px;">
+<p style="
+    margin: 30px 0 10px 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #765E52;
+    text-align: center;
+">
 
-                        <h1 style="
-                            margin: 0 0 20px 0;
-                            text-align: center;
-                            font-family: Georgia, 'Times New Roman', serif;
-                            font-size: 28px;
-                            color: #7F0303;
-                        ">
+    Si el botón no funciona, puedes copiar
+    y pegar este enlace en tu navegador:
 
-                            Recupera tu acceso
+</p>
 
-                        </h1>
 
+<p style="
+    margin: 0;
+    padding: 12px;
+    background-color: #EFE8DF;
+    border: 1px solid #D8BA98;
+    border-radius: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    word-break: break-all;
+    color: #7F0303;
+">
 
-                        <p style="
-                            margin: 0 0 18px 0;
-                            font-size: 16px;
-                            line-height: 1.7;
-                            color: #765E52;
-                        ">
+    {enlace_seguro}
 
-                            Hola,
+</p>
 
-                        </p>
 
+<!-- AVISO -->
 
-                        <p style="
-                            margin: 0 0 18px 0;
-                            font-size: 16px;
-                            line-height: 1.7;
-                            color: #765E52;
-                        ">
+<table
+    width="100%"
+    cellpadding="0"
+    cellspacing="0"
+    border="0"
+    style="margin-top: 30px;"
+>
 
-                            Recibimos una solicitud para recuperar
-                            la contraseña de tu cuenta de
+<tr>
 
-                            <strong style="color: #7F0303;">
-                                MUGI STORE
-                            </strong>.
+<td style="
+    background-color: #EFE8DF;
+    border-left: 4px solid #D4AF37;
+    padding: 15px;
+    border-radius: 8px;
+">
 
-                        </p>
+<p style="
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #765E52;
+">
 
+<strong style="color: #7F0303;">
+    Importante:
+</strong>
 
-                        <p style="
-                            margin: 0 0 30px 0;
-                            font-size: 16px;
-                            line-height: 1.7;
-                            color: #765E52;
-                        ">
+    este enlace es temporal y
+    dejará de funcionar después
+    de un tiempo.
 
-                            Para crear una nueva contraseña,
-                            haz clic en el siguiente botón:
+</p>
 
-                        </p>
+</td>
 
+</tr>
 
-                        <!-- BOTÓN -->
+</table>
 
-                        <table
-                            width="100%"
-                            cellpadding="0"
-                            cellspacing="0"
-                            border="0"
-                        >
 
-                            <tr>
+<!-- SEGURIDAD -->
 
-                                <td align="center">
+<p style="
+    margin: 30px 0 0 0;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #765E52;
+">
 
-                                    <a
-                                        href="{enlace_seguro}"
-                                        style="
-                                            display: inline-block;
-                                            background-color: #7F0303;
-                                            color: #FFFFFF;
-                                            text-decoration: none;
-                                            font-size: 16px;
-                                            font-weight: bold;
-                                            padding: 15px 35px;
-                                            border-radius: 12px;
-                                            border: 2px solid #D4AF37;
-                                        "
-                                    >
+    Si tú no solicitaste este cambio de
+    contraseña, puedes ignorar este correo.
+    Tu cuenta permanecerá segura.
 
-                                        Restablecer contraseña
+</p>
 
-                                    </a>
 
-                                </td>
+<p style="
+    margin: 25px 0 0 0;
+    font-size: 15px;
+    line-height: 1.6;
+    color: #765E52;
+">
 
-                            </tr>
+    Saludos,<br>
 
-                        </table>
+    <strong style="color: #7F0303;">
+        Equipo MUGI STORE
+    </strong>
 
+</p>
 
-                        <!-- ENLACE -->
+</td>
 
-                        <p style="
-                            margin: 30px 0 10px 0;
-                            font-size: 13px;
-                            line-height: 1.6;
-                            color: #765E52;
-                            text-align: center;
-                        ">
+</tr>
 
-                            Si el botón no funciona, puedes copiar
-                            y pegar este enlace en tu navegador:
 
-                        </p>
+<!-- PIE -->
 
+<tr>
 
-                        <p style="
-                            margin: 0;
-                            padding: 12px;
-                            background-color: #EFE8DF;
-                            border: 1px solid #D8BA98;
-                            border-radius: 10px;
-                            font-size: 12px;
-                            line-height: 1.5;
-                            word-break: break-all;
-                            color: #7F0303;
-                        ">
+<td
+    align="center"
+    style="
+        background-color: #7F0303;
+        padding: 25px 20px;
+    "
+>
 
-                            {enlace_seguro}
+<div style="
+    color: #D4AF37;
+    font-size: 18px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+">
+    MUGI STORE
+</div>
 
-                        </p>
+<div style="
+    color: #F8F3EA;
+    font-size: 12px;
+">
+    Gracias por confiar en nosotros.
+</div>
 
+</td>
 
-                        <!-- AVISO -->
+</tr>
 
-                        <table
-                            width="100%"
-                            cellpadding="0"
-                            cellspacing="0"
-                            border="0"
-                            style="margin-top: 30px;"
-                        >
+</table>
 
-                            <tr>
-
-                                <td style="
-                                    background-color: #EFE8DF;
-                                    border-left: 4px solid #D4AF37;
-                                    padding: 15px;
-                                    border-radius: 8px;
-                                ">
-
-                                    <p style="
-                                        margin: 0;
-                                        font-size: 14px;
-                                        line-height: 1.6;
-                                        color: #765E52;
-                                    ">
-
-                                        <strong style="
-                                            color: #7F0303;
-                                        ">
-
-                                            Importante:
-
-                                        </strong>
-
-                                        este enlace es temporal y
-                                        dejará de funcionar después
-                                        de un tiempo.
-
-                                    </p>
-
-                                </td>
-
-                            </tr>
-
-                        </table>
-
-
-                        <!-- SEGURIDAD -->
-
-                        <p style="
-                            margin: 30px 0 0 0;
-                            font-size: 14px;
-                            line-height: 1.7;
-                            color: #765E52;
-                        ">
-
-                            Si tú no solicitaste este cambio de
-                            contraseña, puedes ignorar este correo.
-                            Tu cuenta permanecerá segura.
-
-                        </p>
-
-
-                        <p style="
-                            margin: 25px 0 0 0;
-                            font-size: 15px;
-                            line-height: 1.6;
-                            color: #765E52;
-                        ">
-
-                            Saludos,<br>
-
-                            <strong style="color: #7F0303;">
-
-                                Equipo MUGI STORE
-
-                            </strong>
-
-                        </p>
-
-                    </td>
-
-                </tr>
-
-
-                <!-- PIE -->
-
-                <tr>
-
-                    <td
-                        align="center"
-                        style="
-                            background-color: #7F0303;
-                            padding: 25px 20px;
-                        "
-                    >
-
-                        <div style="
-                            color: #D4AF37;
-                            font-size: 18px;
-                            font-weight: bold;
-                            letter-spacing: 2px;
-                            margin-bottom: 8px;
-                        ">
-
-                            MUGI STORE
-
-                        </div>
-
-
-                        <div style="
-                            color: #F8F3EA;
-                            font-size: 12px;
-                        ">
-
-                            Gracias por confiar en nosotros.
-
-                        </div>
-
-                    </td>
-
-                </tr>
-
-            </table>
-
-        </td>
-
-    </tr>
+</td>
+</tr>
 
 </table>
 
 </body>
-
 </html>
 """
 
     # ========================================================
-    # CREAR MENSAJE
+    # ENVÍO MEDIANTE RESEND
     # ========================================================
 
-    mensaje = MessageSchema(
-        subject="Recuperación de contraseña - MUGI STORE",
-        recipients=[correo_destino],
-        body=cuerpo_html,
-        subtype="html",
-    )
+    if not RESEND_API_KEY:
+        raise Exception(
+            "No está configurada la variable RESEND_API_KEY"
+        )
 
-    # ========================================================
-    # FASTMAIL
-    # ========================================================
+    if not MAIL_FROM:
+        raise Exception(
+            "No está configurada la variable MAIL_FROM"
+        )
 
-    print("CREANDO CONEXIÓN CON GMAIL...")
+    datos = {
+        "from": MAIL_FROM,
+        "to": [correo_destino],
+        "subject": "Recuperación de contraseña - MUGI STORE",
+        "html": cuerpo_html,
+    }
 
-    fm = FastMail(conf)
+    headers = {
+        "Authorization": f"Bearer {RESEND_API_KEY}",
+        "Content-Type": "application/json",
+    }
 
-    print("INTENTANDO ENVIAR CORREO...")
+    print("ENVIANDO CORREO MEDIANTE RESEND...")
     print("DESTINO:", correo_destino)
-
-    # ========================================================
-    # ENVIAR CORREO
-    # ========================================================
 
     try:
 
-        await fm.send_message(mensaje)
+        respuesta = requests.post(
+            "https://api.resend.com/emails",
+            headers=headers,
+            json=datos,
+            timeout=30,
+        )
+
+        print("RESPUESTA RESEND:", respuesta.status_code)
+
+        if not respuesta.ok:
+
+            print("ERROR RESEND:", respuesta.text)
+
+            raise Exception(
+                f"Resend rechazó el correo: {respuesta.text}"
+            )
 
         print("CORREO ENVIADO CORRECTAMENTE")
         print("====================================")
