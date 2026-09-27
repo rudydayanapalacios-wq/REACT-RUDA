@@ -20,23 +20,27 @@ app = FastAPI(title="API Proyecto React")
 # ==========================================================
 # CORS
 # ==========================================================
-origins = [
-    # Frontend local
-    "http://localhost:5173",
+# ==========================================================
+# CORS
+# ==========================================================
 
-    # Frontend de producción
+# ==========================================================
+# CORS
+# ==========================================================
+
+origins = [
+    "http://localhost:5173",
     "https://mugi-store.vercel.app",
 ]
-
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=r"https://mugi-store-[a-z0-9]+-rudy-05c0\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 # ==========================================================
 # RUTAS
