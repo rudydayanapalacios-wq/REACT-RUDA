@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import EstructuraPanel from "../components/EstructuraPanel";
-import Alerta from "./Alerta";
+import Alerta from "../components/Alerta";
 import {
   Package,
   Headphones,
