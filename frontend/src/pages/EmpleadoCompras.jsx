@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -14,6 +15,7 @@ import {
 import EstructuraPanel from "../components/EstructuraPanel";
 import { useAuth } from "../context/AuthContext";
 import { generarFacturaPDF } from "../utils/generarFacturaPDF";
+import Factura from "./Factura";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -24,7 +26,10 @@ export default function EmpleadoCompras() {
   const [ventas, setVentas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+  const [facturaModal, setFacturaModal] = useState(null);
+
   const COMPRAS_POR_PAGINA = 6;
+
   const [paginaActual, setPaginaActual] = useState(1);
 
   const cargarVentas = async () => {
@@ -62,6 +67,7 @@ export default function EmpleadoCompras() {
       console.error("Error cargando compras:", error);
 
       setVentas([]);
+
       setError(
         error.message || "No se pudieron cargar tus compras."
       );
@@ -123,7 +129,7 @@ export default function EmpleadoCompras() {
       return;
     }
 
-    navigate(`/factura/${ventaId}`);
+    setFacturaModal(ventaId);
   };
 
   const descargarFactura = async (venta) => {
@@ -144,7 +150,6 @@ export default function EmpleadoCompras() {
     <EstructuraPanel rol="empleado" titulo="Empleado">
       <section className="min-h-screen bg-[#EFE8DF] px-4 py-8 sm:px-6 md:px-8 md:py-12">
         <div className="mx-auto max-w-6xl">
-
           {/* CABECERA */}
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -173,12 +178,10 @@ export default function EmpleadoCompras() {
 
           {/* CONTENEDOR PRINCIPAL */}
           <div className="overflow-hidden rounded-[2.5rem] border border-[#D4AF37]/25 bg-[#F8F3EA] shadow-md">
-
             {/* ENCABEZADO */}
             <div className="flex flex-col justify-between gap-4 border-b border-[#D8BA98]/50 px-7 py-6 sm:flex-row sm:items-center md:px-9">
               <div>
                 <div className="flex items-center gap-3">
-
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#7F0303] text-white">
                     <FileText size={23} />
                   </div>
@@ -192,7 +195,6 @@ export default function EmpleadoCompras() {
                       Historial de compras
                     </h2>
                   </div>
-
                 </div>
               </div>
 
@@ -211,7 +213,6 @@ export default function EmpleadoCompras() {
             </div>
 
             <div className="p-7 md:p-9">
-
               {/* CARGANDO */}
               {cargando && (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -261,7 +262,6 @@ export default function EmpleadoCompras() {
                 !error &&
                 ventas.length === 0 && (
                   <div className="rounded-2xl border border-[#D8BA98] bg-white/50 p-10 text-center">
-
                     <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#7F0303] text-white">
                       <Package size={28} />
                     </div>
@@ -272,7 +272,7 @@ export default function EmpleadoCompras() {
 
                     <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#927E70]">
                       Cuando realices una compra, aparecerá
-                      automáticamente en este historial.
+                      automáticamente en este historial de compras.
                     </p>
 
                     <button
@@ -291,11 +291,12 @@ export default function EmpleadoCompras() {
                 !error &&
                 ventas.length > 0 && (
                   <div className="space-y-4">
-
                     {ventasPaginadas.map((venta) => {
                       const ventaId = obtenerIdVenta(venta);
+
                       const numeroFactura =
                         obtenerNumeroFactura(venta);
+
                       const fecha = obtenerFecha(venta);
 
                       const subtotal = Number(
@@ -320,12 +321,9 @@ export default function EmpleadoCompras() {
                           className="rounded-2xl border border-[#D8BA98] bg-white/60 p-5 transition-all duration-300 hover:border-[#D4AF37] hover:bg-white/80 hover:shadow-md"
                         >
                           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-
                             {/* INFORMACIÓN */}
                             <div className="min-w-0">
-
                               <div className="flex items-center gap-4">
-
                                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#7F0303] text-white">
                                   <FileText size={20} />
                                 </div>
@@ -339,11 +337,9 @@ export default function EmpleadoCompras() {
                                     {numeroFactura}
                                   </p>
                                 </div>
-
                               </div>
 
                               <div className="mt-4 flex flex-col gap-2 text-sm text-[#765E52] sm:flex-row sm:flex-wrap sm:gap-x-6">
-
                                 <span className="inline-flex items-center gap-2">
                                   <CalendarDays size={15} />
                                   {formatearFecha(fecha)}
@@ -355,16 +351,13 @@ export default function EmpleadoCompras() {
                                     {venta.estado || "Registrada"}
                                   </strong>
                                 </span>
-
                               </div>
                             </div>
 
                             {/* RESUMEN */}
                             <div className="flex flex-col gap-4 border-t border-[#D8BA98]/50 pt-4 sm:flex-row sm:items-end sm:justify-between lg:border-t-0 lg:pt-0">
-
                               <div className="lg:text-right">
                                 <div className="space-y-1">
-
                                   <div className="flex items-center justify-between gap-6 text-sm">
                                     <span className="text-[#927E70]">
                                       Subtotal
@@ -404,7 +397,6 @@ export default function EmpleadoCompras() {
                                       {formatearPrecio(total)}
                                     </p>
                                   </div>
-
                                 </div>
                               </div>
 
@@ -420,64 +412,80 @@ export default function EmpleadoCompras() {
 
                                 <button
                                   type="button"
-                                  onClick={() => descargarFactura(venta)}
+                                  onClick={() =>
+                                    descargarFactura(venta)
+                                  }
                                   className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#7F0303] px-5 py-3 text-sm font-bold text-[#7F0303] transition hover:bg-[#F8EDE7]"
                                 >
                                   <Download size={17} />
                                   Descargar PDF
                                 </button>
                               </div>
-
                             </div>
                           </div>
                         </div>
                       );
                     })}
-
                   </div>
                 )}
 
-              {!cargando && !error && totalPaginas > 1 && (
-                <div className="mt-8 flex flex-wrap items-center justify-center gap-2 border-t border-[#D8BA98]/50 pt-6">
-                  <button
-                    type="button"
-                    disabled={paginaActual === 1}
-                    onClick={() => setPaginaActual((pagina) => pagina - 1)}
-                    className="rounded-xl border border-[#D8BA98] px-4 py-2 text-sm font-semibold text-[#7F0303] transition hover:border-[#D4AF37] hover:bg-[#F8F3EA] disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    ← Anterior
-                  </button>
-
-                  {Array.from({ length: totalPaginas }, (_, index) => index + 1).map((pagina) => (
+              {!cargando &&
+                !error &&
+                totalPaginas > 1 && (
+                  <div className="mt-8 flex flex-wrap items-center justify-center gap-2 border-t border-[#D8BA98]/50 pt-6">
                     <button
-                      key={pagina}
                       type="button"
-                      onClick={() => setPaginaActual(pagina)}
-                      className={`h-10 w-10 rounded-xl text-sm font-bold transition ${
-                        pagina === paginaActual
-                          ? "bg-[#D4AF37] text-[#4A0505]"
-                          : "border border-[#D8BA98] bg-[#F8F3EA] text-[#7F0303] hover:border-[#D4AF37]"
-                      }`}
+                      disabled={paginaActual === 1}
+                      onClick={() =>
+                        setPaginaActual((pagina) => pagina - 1)
+                      }
+                      className="rounded-xl border border-[#D8BA98] px-4 py-2 text-sm font-semibold text-[#7F0303] transition hover:border-[#D4AF37] hover:bg-[#F8F3EA] disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                      {pagina}
+                      ← Anterior
                     </button>
-                  ))}
 
-                  <button
-                    type="button"
-                    disabled={paginaActual === totalPaginas}
-                    onClick={() => setPaginaActual((pagina) => pagina + 1)}
-                    className="rounded-xl border border-[#D8BA98] px-4 py-2 text-sm font-semibold text-[#7F0303] transition hover:border-[#D4AF37] hover:bg-[#F8F3EA] disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Siguiente →
-                  </button>
-                </div>
-              )}
+                    {Array.from(
+                      { length: totalPaginas },
+                      (_, index) => index + 1
+                    ).map((pagina) => (
+                      <button
+                        key={pagina}
+                        type="button"
+                        onClick={() => setPaginaActual(pagina)}
+                        className={`h-10 w-10 rounded-xl text-sm font-bold transition ${
+                          pagina === paginaActual
+                            ? "bg-[#D4AF37] text-[#4A0505]"
+                            : "border border-[#D8BA98] bg-[#F8F3EA] text-[#7F0303] hover:border-[#D4AF37]"
+                        }`}
+                      >
+                        {pagina}
+                      </button>
+                    ))}
 
+                    <button
+                      type="button"
+                      disabled={paginaActual === totalPaginas}
+                      onClick={() =>
+                        setPaginaActual((pagina) => pagina + 1)
+                      }
+                      className="rounded-xl border border-[#D8BA98] px-4 py-2 text-sm font-semibold text-[#7F0303] transition hover:border-[#D4AF37] hover:bg-[#F8F3EA] disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Siguiente →
+                    </button>
+                  </div>
+                )}
             </div>
           </div>
         </div>
       </section>
+
+      {facturaModal && (
+        <Factura
+          ventaIdProp={facturaModal}
+          modoModal={true}
+          onCerrar={() => setFacturaModal(null)}
+        />
+      )}
     </EstructuraPanel>
   );
 }
