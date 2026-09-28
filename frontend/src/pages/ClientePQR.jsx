@@ -30,6 +30,7 @@ function ClientePQR() {
 
   const [enviandoPqr, setEnviandoPqr] = useState(false);
   const [mensajePqr, setMensajePqr] = useState("");
+  const [modalPqrAbierto, setModalPqrAbierto] = useState(false);
 
   const [formularioPqr, setFormularioPqr] = useState({
     tipo: "Queja",
@@ -157,16 +158,16 @@ function ClientePQR() {
       });
 
       await cargarPqr();
-    } catch (error) {
-      console.error("Error enviando PQR:", error);
+      return true;
+   } catch (error) {
+  console.error("Error enviando PQR:", error);
 
-      setMensajePqr(
-        error.message || "No se pudo enviar la PQR."
-      );
-    } finally {
-      setEnviandoPqr(false);
-    }
-  };
+  setMensajePqr(
+    error.message || "No se pudo enviar la PQR."
+  );
+
+  return false;
+}
 
   // ==========================================================
   // ESTADO PQR
@@ -394,167 +395,22 @@ function ClientePQR() {
               FORMULARIO
           ================================================== */}
 
-          <section className="mb-8 rounded-[2rem] border border-[#D4AF37]/20 bg-[#F8F3EA] p-6 shadow-md sm:p-8">
+        {/* ==================================================
+    BOTÓN NUEVA PQR
+================================================== */}
 
-            <div className="mb-7">
-              <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#D4AF37]">
-                Nueva solicitud
-              </p>
-
-              <h2 className="mt-2 font-serif text-2xl font-bold text-[#7F0303]">
-                Enviar una PQR
-              </h2>
-
-              <p className="mt-2 text-sm leading-6 text-[#927E70]">
-                Cuéntanos qué necesitas. Tu solicitud será enviada
-                al equipo encargado para su revisión.
-              </p>
-            </div>
-
-            <form
-              onSubmit={enviarPqr}
-              className="space-y-5"
-            >
-
-              {/* TIPO */}
-
-              <div>
-                <label
-                  htmlFor="tipo-pqr"
-                  className="mb-2 block text-sm font-bold text-[#241415]"
-                >
-                  Tipo de solicitud
-                </label>
-
-                <select
-                  id="tipo-pqr"
-                  value={formularioPqr.tipo}
-                  onChange={(e) =>
-                    cambiarFormularioPqr(
-                      "tipo",
-                      e.target.value
-                    )
-                  }
-                  className="w-full rounded-xl border border-[#D8BA98] bg-white px-4 py-3 text-sm text-[#241415] outline-none transition focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
-                >
-                  <option value="Petición">
-                    Petición
-                  </option>
-
-                  <option value="Queja">
-                    Queja
-                  </option>
-
-                  <option value="Reclamo">
-                    Reclamo
-                  </option>
-
-                  <option value="Solicitud">
-                    Solicitud
-                  </option>
-                </select>
-              </div>
-
-              {/* ASUNTO */}
-
-              <div>
-                <label
-                  htmlFor="asunto-pqr"
-                  className="mb-2 block text-sm font-bold text-[#241415]"
-                >
-                  Asunto
-                </label>
-
-                <input
-                  id="asunto-pqr"
-                  type="text"
-                  value={formularioPqr.asunto}
-                  onChange={(e) =>
-                    cambiarFormularioPqr(
-                      "asunto",
-                      e.target.value
-                    )
-                  }
-                  placeholder="Escribe el asunto de tu PQR"
-                  maxLength={150}
-                  className="w-full rounded-xl border border-[#D8BA98] bg-white px-4 py-3 text-sm text-[#241415] outline-none transition placeholder:text-[#B2A298] focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
-                />
-
-                <p className="mt-1 text-right text-xs text-[#927E70]">
-                  {formularioPqr.asunto.length}/150
-                </p>
-              </div>
-
-              {/* DESCRIPCIÓN */}
-
-              <div>
-                <label
-                  htmlFor="descripcion-pqr"
-                  className="mb-2 block text-sm font-bold text-[#241415]"
-                >
-                  Descripción
-                </label>
-
-                <textarea
-                  id="descripcion-pqr"
-                  value={formularioPqr.descripcion}
-                  onChange={(e) =>
-                    cambiarFormularioPqr(
-                      "descripcion",
-                      e.target.value
-                    )
-                  }
-                  placeholder="Describe detalladamente tu petición, queja, reclamo o solicitud..."
-                  maxLength={500}
-                  rows={6}
-                  className="w-full resize-none rounded-xl border border-[#D8BA98] bg-white px-4 py-3 text-sm leading-6 text-[#241415] outline-none transition placeholder:text-[#B2A298] focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
-                />
-
-                <p className="mt-1 text-right text-xs text-[#927E70]">
-                  {formularioPqr.descripcion.length}/500
-                </p>
-              </div>
-
-              {/* MENSAJE */}
-
-              {mensajePqr && (
-                <div
-                  className={`rounded-xl border px-4 py-3 text-sm ${
-                    mensajePqr.includes("correctamente")
-                      ? "border-green-200 bg-green-50 text-green-700"
-                      : "border-red-200 bg-red-50 text-red-700"
-                  }`}
-                >
-                  {mensajePqr}
-                </div>
-              )}
-
-              {/* BOTÓN */}
-
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  disabled={enviandoPqr}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#7F0303] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#5E0202] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {enviandoPqr ? (
-                    <>
-                      <RefreshCw
-                        size={17}
-                        className="animate-spin"
-                      />
-                      Enviando...
-                    </>
-                  ) : (
-                    <>
-                      <Send size={17} />
-                      Enviar PQR
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </section>
+<div className="mb-8 flex justify-end">
+  <button
+    onClick={() => {
+      setMensajePqr("");
+      setModalPqrAbierto(true);
+    }}
+    className="inline-flex items-center gap-2 rounded-xl bg-[#7F0303] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#5E0202]"
+  >
+    <Send size={16} />
+    Nueva PQR
+  </button>
+</div>
 
           {/* ==================================================
               HISTORIAL
@@ -748,8 +604,111 @@ function ClientePQR() {
 
         </div>
       </section>
+            {modalPqrAbierto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-2xl rounded-[2rem] bg-[#F8F3EA] p-6 shadow-2xl">
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="font-serif text-2xl font-bold text-[#7F0303]">
+                Enviar PQR
+              </h2>
+
+              <button
+                type="button"
+                onClick={() => setModalPqrAbierto(false)}
+                className="rounded-lg px-3 py-1 text-xl font-bold text-[#7F0303]"
+              >
+                ×
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                const enviado = await enviarPqr(e);
+
+                if (enviado) {
+                  setModalPqrAbierto(false);
+                }
+              }}
+              className="space-y-5"
+            >
+              <div>
+                <label className="mb-2 block text-sm font-bold text-[#241415]">
+                  Tipo
+                </label>
+
+                <select
+                  value={formularioPqr.tipo}
+                  onChange={(e) =>
+                    cambiarFormularioPqr("tipo", e.target.value)
+                  }
+                  className="w-full rounded-xl border border-[#D8BA98] px-4 py-3"
+                >
+                  <option value="Petición">Petición</option>
+                  <option value="Queja">Queja</option>
+                  <option value="Reclamo">Reclamo</option>
+                  <option value="Solicitud">Solicitud</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-bold text-[#241415]">
+                  Asunto
+                </label>
+
+                <input
+                  type="text"
+                  value={formularioPqr.asunto}
+                  onChange={(e) =>
+                    cambiarFormularioPqr("asunto", e.target.value)
+                  }
+                  className="w-full rounded-xl border border-[#D8BA98] px-4 py-3"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-bold text-[#241415]">
+                  Descripción
+                </label>
+
+                <textarea
+                  rows={6}
+                  value={formularioPqr.descripcion}
+                  onChange={(e) =>
+                    cambiarFormularioPqr("descripcion", e.target.value)
+                  }
+                  className="w-full rounded-xl border border-[#D8BA98] px-4 py-3"
+                />
+              </div>
+
+              {mensajePqr && (
+                <div className="rounded-xl border border-[#D8BA98] bg-white p-3 text-sm">
+                  {mensajePqr}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setModalPqrAbierto(false)}
+                  className="rounded-xl border border-[#D8BA98] px-5 py-3"
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={enviandoPqr}
+                  className="rounded-xl bg-[#7F0303] px-5 py-3 font-bold text-white"
+                >
+                  {enviandoPqr ? "Enviando..." : "Enviar PQR"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </EstructuraPanel>
   );
 }
-
+}
 export default ClientePQR;
