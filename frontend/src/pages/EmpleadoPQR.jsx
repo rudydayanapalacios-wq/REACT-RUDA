@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import EstructuraPanel from "../components/EstructuraPanel";
-
 import {
   MessageCircle,
   RefreshCw,
@@ -19,10 +18,8 @@ const API_URL = import.meta.env.VITE_API_URL;
 function EmpleadoPQR() {
   const [pqr, setPqr] = useState([]);
   const [cargando, setCargando] = useState(true);
-
   const [busqueda, setBusqueda] = useState("");
   const [pqrSeleccionada, setPqrSeleccionada] = useState(null);
-
   const [respuesta, setRespuesta] = useState("");
   const [estado, setEstado] = useState("resuelta");
   const [enviando, setEnviando] = useState(false);
@@ -37,19 +34,26 @@ function EmpleadoPQR() {
 
       const token = localStorage.getItem("token");
 
+      if (!token) {
+        throw new Error("No hay una sesión activa.");
+      }
+
       const response = await fetch(`${API_URL}/pqr/`, {
+        method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      if (!response.ok) {
-        throw new Error("No se pudieron obtener las PQR.");
-      }
-
       const datos = await response.json();
 
-      setPqr(datos);
+      if (!response.ok) {
+        throw new Error(
+          datos.detail || "No se pudieron obtener las PQR."
+        );
+      }
+
+      setPqr(Array.isArray(datos) ? datos : []);
 
       if (pqrSeleccionada) {
         const actualizada = datos.find(
@@ -99,6 +103,10 @@ function EmpleadoPQR() {
       setEnviando(true);
 
       const token = localStorage.getItem("token");
+
+      if (!token) {
+        throw new Error("No hay una sesión activa.");
+      }
 
       const response = await fetch(
         `${API_URL}/pqr/${pqrSeleccionada.id}/responder`,
@@ -281,7 +289,6 @@ function EmpleadoPQR() {
                     cargando ? "animate-spin" : ""
                   }
                 />
-
                 Actualizar
               </button>
             </div>
@@ -294,9 +301,9 @@ function EmpleadoPQR() {
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
             {/* TOTAL */}
+
             <div className="rounded-[22px] border border-[#E2D7CB] bg-white p-5 shadow-[0_6px_20px_rgba(36,20,21,0.04)]">
               <div className="flex items-center justify-between">
-
                 <div>
                   <p className="text-sm font-medium text-[#806F67]">
                     Total de PQR
@@ -310,14 +317,13 @@ function EmpleadoPQR() {
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F4E9E5] text-[#7F0303]">
                   <MessageCircle size={21} />
                 </div>
-
               </div>
             </div>
 
             {/* PENDIENTES */}
+
             <div className="rounded-[22px] border border-[#E2D7CB] bg-white p-5 shadow-[0_6px_20px_rgba(36,20,21,0.04)]">
               <div className="flex items-center justify-between">
-
                 <div>
                   <p className="text-sm font-medium text-[#806F67]">
                     Pendientes
@@ -331,14 +337,13 @@ function EmpleadoPQR() {
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F5ECE8] text-[#7F0303]">
                   <AlertCircle size={21} />
                 </div>
-
               </div>
             </div>
 
             {/* EN PROCESO */}
+
             <div className="rounded-[22px] border border-[#E2D7CB] bg-white p-5 shadow-[0_6px_20px_rgba(36,20,21,0.04)]">
               <div className="flex items-center justify-between">
-
                 <div>
                   <p className="text-sm font-medium text-[#806F67]">
                     En proceso
@@ -352,14 +357,13 @@ function EmpleadoPQR() {
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F5F0E5] text-[#806A39]">
                   <Clock size={21} />
                 </div>
-
               </div>
             </div>
 
             {/* RESPONDIDAS */}
+
             <div className="rounded-[22px] border border-[#E2D7CB] bg-white p-5 shadow-[0_6px_20px_rgba(36,20,21,0.04)]">
               <div className="flex items-center justify-between">
-
                 <div>
                   <p className="text-sm font-medium text-[#806F67]">
                     Respondidas
@@ -373,10 +377,8 @@ function EmpleadoPQR() {
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#ECEFE9] text-[#50634F]">
                   <CheckCircle2 size={21} />
                 </div>
-
               </div>
             </div>
-
           </section>
 
           {/* ==================================================
@@ -384,7 +386,6 @@ function EmpleadoPQR() {
           ================================================== */}
 
           <section className="rounded-[22px] border border-[#E2D7CB] bg-white p-5 shadow-[0_6px_20px_rgba(36,20,21,0.04)]">
-
             <div className="relative">
               <Search
                 size={19}
@@ -401,7 +402,6 @@ function EmpleadoPQR() {
                 className="w-full rounded-xl border border-[#DED2C6] bg-[#F8F3EA] py-3.5 pl-11 pr-4 text-sm text-[#241415] outline-none transition placeholder:text-[#9A8980] focus:border-[#7F0303] focus:ring-2 focus:ring-[#7F0303]/10"
               />
             </div>
-
           </section>
 
           {/* ==================================================
@@ -417,7 +417,6 @@ function EmpleadoPQR() {
             <div className="overflow-hidden rounded-[24px] border border-[#E2D7CB] bg-white shadow-[0_6px_20px_rgba(36,20,21,0.04)]">
 
               <div className="border-b border-[#E8DED5] bg-[#F8F3EA] px-5 py-4">
-
                 <div className="flex items-center justify-between gap-3">
 
                   <div>
@@ -436,18 +435,14 @@ function EmpleadoPQR() {
                   <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#7F0303] text-[#F8F3EA]">
                     <MessageCircle size={17} />
                   </div>
-
                 </div>
-
               </div>
 
               <div className="max-h-[650px] overflow-y-auto p-4">
 
                 {cargando ? (
                   <div className="flex min-h-[300px] items-center justify-center">
-
                     <div className="flex flex-col items-center gap-3 text-[#806F67]">
-
                       <RefreshCw
                         size={25}
                         className="animate-spin text-[#7F0303]"
@@ -456,13 +451,10 @@ function EmpleadoPQR() {
                       <p className="text-sm">
                         Cargando PQR...
                       </p>
-
                     </div>
-
                   </div>
                 ) : pqrFiltradas.length === 0 ? (
                   <div className="flex min-h-[300px] flex-col items-center justify-center px-6 text-center">
-
                     <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F4E9E5] text-[#7F0303]">
                       <MessageCircle size={25} />
                     </div>
@@ -474,11 +466,9 @@ function EmpleadoPQR() {
                     <p className="mt-1 max-w-xs text-sm text-[#806F67]">
                       No encontramos solicitudes que coincidan con la búsqueda.
                     </p>
-
                   </div>
                 ) : (
                   <div className="space-y-3">
-
                     {pqrFiltradas.map((item) => {
                       const estiloEstado =
                         obtenerEstiloEstado(
@@ -501,14 +491,11 @@ function EmpleadoPQR() {
                               : "border-[#E5DBD2] bg-white hover:border-[#BCA99D] hover:bg-[#FCFAF7]"
                           }`}
                         >
-
                           <div className="flex items-start justify-between gap-3">
 
                             <div className="min-w-0 flex-1">
 
-                              {/* PQR + CLIENTE */}
                               <div className="flex items-start gap-2">
-
                                 <span className="shrink-0 text-xs font-bold text-[#7F0303]">
                                   PQR #{item.id}
                                 </span>
@@ -518,7 +505,6 @@ function EmpleadoPQR() {
                                 </span>
 
                                 <div className="min-w-0">
-
                                   <p className="truncate text-xs font-semibold text-[#241415]">
                                     {item.nombre_cliente ||
                                       `Usuario #${item.usuario_id}`}
@@ -528,9 +514,7 @@ function EmpleadoPQR() {
                                     {item.correo_cliente ||
                                       "Correo no disponible"}
                                   </p>
-
                                 </div>
-
                               </div>
 
                               <h3 className="mt-3 truncate font-semibold text-[#241415]">
@@ -540,7 +524,6 @@ function EmpleadoPQR() {
                               <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#806F67]">
                                 {item.descripcion}
                               </p>
-
                             </div>
 
                             <span
@@ -549,11 +532,9 @@ function EmpleadoPQR() {
                               {estiloEstado.icono}
                               {item.estado}
                             </span>
-
                           </div>
 
                           <div className="mt-3 flex items-center justify-between border-t border-[#EDE5DE] pt-3">
-
                             <span className="text-[11px] font-medium text-[#8C7A71]">
                               {item.tipo}
                             </span>
@@ -567,18 +548,13 @@ function EmpleadoPQR() {
                                 Sin respuesta
                               </span>
                             )}
-
                           </div>
-
                         </button>
                       );
                     })}
-
                   </div>
                 )}
-
               </div>
-
             </div>
 
             {/* ==================================================
@@ -604,7 +580,6 @@ function EmpleadoPQR() {
                   <p className="mt-2 max-w-md text-sm leading-6 text-[#806F67]">
                     Selecciona una solicitud de la lista para consultar toda la información y enviar una respuesta.
                   </p>
-
                 </div>
               ) : (
                 <>
@@ -613,11 +588,9 @@ function EmpleadoPQR() {
                   ================================================== */}
 
                   <div className="border-b border-[#E8DED5] bg-[#F8F3EA] px-6 py-5">
-
                     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 
                       <div>
-
                         <div className="flex items-start gap-3">
 
                           <span className="rounded-lg bg-[#7F0303] px-2.5 py-1 text-xs font-bold text-[#F8F3EA]">
@@ -635,13 +608,11 @@ function EmpleadoPQR() {
                                 "Correo no disponible"}
                             </p>
                           </div>
-
                         </div>
 
                         <h2 className="mt-4 text-xl font-bold text-[#241415]">
                           {pqrSeleccionada.asunto}
                         </h2>
-
                       </div>
 
                       <span
@@ -659,9 +630,7 @@ function EmpleadoPQR() {
 
                         {pqrSeleccionada.estado}
                       </span>
-
                     </div>
-
                   </div>
 
                   {/* ==================================================
@@ -677,9 +646,7 @@ function EmpleadoPQR() {
                       {/* NOMBRE */}
 
                       <div className="rounded-xl border border-[#E5DBD2] bg-[#FCFAF7] p-4">
-
                         <div className="flex items-center gap-2">
-
                           <User
                             size={16}
                             className="text-[#7F0303]"
@@ -688,22 +655,18 @@ function EmpleadoPQR() {
                           <span className="text-xs font-semibold uppercase tracking-wide text-[#927E74]">
                             Cliente
                           </span>
-
                         </div>
 
                         <p className="mt-2 text-sm font-semibold text-[#241415]">
                           {pqrSeleccionada.nombre_cliente ||
                             `Usuario #${pqrSeleccionada.usuario_id}`}
                         </p>
-
                       </div>
 
                       {/* CORREO */}
 
                       <div className="rounded-xl border border-[#E5DBD2] bg-[#FCFAF7] p-4">
-
                         <div className="flex items-center gap-2">
-
                           <Mail
                             size={16}
                             className="text-[#7F0303]"
@@ -712,24 +675,19 @@ function EmpleadoPQR() {
                           <span className="text-xs font-semibold uppercase tracking-wide text-[#927E74]">
                             Correo electrónico
                           </span>
-
                         </div>
 
                         <p className="mt-2 break-all text-sm font-semibold text-[#241415]">
                           {pqrSeleccionada.correo_cliente ||
                             "Correo no disponible"}
                         </p>
-
                       </div>
-
                     </div>
 
                     {/* TIPO */}
 
                     <div className="rounded-xl border border-[#E5DBD2] bg-[#FCFAF7] p-4">
-
                       <div className="flex items-center gap-2">
-
                         <MessageCircle
                           size={16}
                           className="text-[#7F0303]"
@@ -738,48 +696,38 @@ function EmpleadoPQR() {
                         <span className="text-xs font-semibold uppercase tracking-wide text-[#927E74]">
                           Tipo de solicitud
                         </span>
-
                       </div>
 
                       <p className="mt-2 text-sm font-semibold capitalize text-[#241415]">
                         {pqrSeleccionada.tipo}
                       </p>
-
                     </div>
 
                     {/* DESCRIPCIÓN */}
 
                     <div>
-
                       <div className="mb-2 flex items-center justify-between">
-
                         <h3 className="text-sm font-bold text-[#241415]">
                           Descripción de la solicitud
                         </h3>
-
                       </div>
 
                       <div className="rounded-2xl border border-[#E5DBD2] bg-[#F8F3EA] p-5">
-
                         <p className="whitespace-pre-wrap text-sm leading-7 text-[#5F514A]">
                           {pqrSeleccionada.descripcion}
                         </p>
-
                       </div>
-
                     </div>
 
                     {/* RESPUESTA ANTERIOR */}
 
                     {pqrSeleccionada.respuesta && (
                       <div>
-
                         <h3 className="mb-2 text-sm font-bold text-[#241415]">
                           Respuesta registrada
                         </h3>
 
                         <div className="rounded-2xl border border-[#D6DED2] bg-[#F3F5F1] p-5">
-
                           <p className="whitespace-pre-wrap text-sm leading-7 text-[#50634F]">
                             {pqrSeleccionada.respuesta}
                           </p>
@@ -790,9 +738,7 @@ function EmpleadoPQR() {
                               {pqrSeleccionada.respondido_por}
                             </p>
                           )}
-
                         </div>
-
                       </div>
                     )}
 
@@ -801,7 +747,6 @@ function EmpleadoPQR() {
                     <div className="border-t border-[#E8DED5] pt-6">
 
                       <div className="mb-4">
-
                         <h3 className="text-base font-bold text-[#241415]">
                           Gestionar PQR
                         </h3>
@@ -809,7 +754,6 @@ function EmpleadoPQR() {
                         <p className="mt-1 text-xs text-[#806F67]">
                           Escribe una respuesta y selecciona el nuevo estado.
                         </p>
-
                       </div>
 
                       <div className="space-y-4">
@@ -817,7 +761,6 @@ function EmpleadoPQR() {
                         {/* ESTADO */}
 
                         <div>
-
                           <label
                             htmlFor="estado-pqr"
                             className="mb-2 block text-sm font-semibold text-[#4B3C36]"
@@ -849,13 +792,11 @@ function EmpleadoPQR() {
                               Cerrada
                             </option>
                           </select>
-
                         </div>
 
                         {/* RESPUESTA */}
 
                         <div>
-
                           <label
                             htmlFor="respuesta-pqr"
                             className="mb-2 block text-sm font-semibold text-[#4B3C36]"
@@ -876,13 +817,10 @@ function EmpleadoPQR() {
                           />
 
                           <div className="mt-1 flex justify-end">
-
                             <span className="text-[11px] text-[#927E74]">
                               {respuesta.length}/500
                             </span>
-
                           </div>
-
                         </div>
 
                         {/* BOTÓN */}
@@ -896,38 +834,28 @@ function EmpleadoPQR() {
                           }
                           className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#7F0303] px-5 py-3.5 text-sm font-bold text-[#F8F3EA] transition hover:bg-[#241415] disabled:cursor-not-allowed disabled:opacity-50"
                         >
-
                           {enviando ? (
                             <>
                               <RefreshCw
                                 size={17}
                                 className="animate-spin"
                               />
-
                               Guardando...
                             </>
                           ) : (
                             <>
                               <Send size={17} />
-
                               Guardar respuesta
                             </>
                           )}
-
                         </button>
-
                       </div>
-
                     </div>
-
                   </div>
                 </>
               )}
-
             </div>
-
           </section>
-
         </div>
       </div>
     </EstructuraPanel>
