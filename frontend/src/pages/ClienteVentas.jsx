@@ -13,21 +13,36 @@ import {
 } from "lucide-react";
 
 import EstructuraPanel from "../components/EstructuraPanel";
-
 import { useAuth } from "../context/AuthContext";
 import { generarFacturaPDF } from "../utils/generarFacturaPDF";
 import Alerta from "../components/Alerta";
+import Factura from "./Factura";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
 export default function ClienteVentas() {
   const navigate = useNavigate();
+
   const { token } = useAuth();
 
   const [ventas, setVentas] = useState([]);
+
   const [cargando, setCargando] = useState(true);
+
   const [error, setError] = useState("");
+
   const [alerta, setAlerta] = useState("");
+
+  // =========================================================
+  // MODAL DE FACTURA
+  // =========================================================
+
+  const [facturaModal, setFacturaModal] = useState(null);
+
+  // =========================================================
+  // CARGAR VENTAS
+  // =========================================================
+
   const cargarVentas = async () => {
     if (!token) {
       setVentas([]);
@@ -75,9 +90,17 @@ export default function ClienteVentas() {
     cargarVentas();
   }, [token]);
 
+  // =========================================================
+  // OBTENER ID
+  // =========================================================
+
   const obtenerIdVenta = (venta) => {
     return venta?.id || venta?.venta_id || venta?._id;
   };
+
+  // =========================================================
+  // OBTENER NÚMERO DE FACTURA
+  // =========================================================
 
   const obtenerNumeroFactura = (venta) => {
     return (
@@ -86,6 +109,10 @@ export default function ClienteVentas() {
       `COMPRA-${obtenerIdVenta(venta)}`
     );
   };
+
+  // =========================================================
+  // OBTENER FECHA
+  // =========================================================
 
   const obtenerFecha = (venta) => {
     return (
@@ -96,9 +123,17 @@ export default function ClienteVentas() {
     );
   };
 
+  // =========================================================
+  // FORMATEAR PRECIO
+  // =========================================================
+
   const formatearPrecio = (valor) => {
     return `$${Number(valor || 0).toLocaleString("es-CO")}`;
   };
+
+  // =========================================================
+  // FORMATEAR FECHA
+  // =========================================================
 
   const formatearFecha = (fecha) => {
     if (!fecha) {
@@ -116,34 +151,95 @@ export default function ClienteVentas() {
     }
   };
 
+  // =========================================================
+  // VER FACTURA EN MODAL
+  // =========================================================
+
   const verFactura = (venta) => {
-  const ventaId = obtenerIdVenta(venta);
+    const ventaId = obtenerIdVenta(venta);
 
-  if (!ventaId) {
-    setAlerta("No se encontró el identificador de la compra.");
+    if (!ventaId) {
+      setAlerta("No se encontró el identificador de la compra.");
 
-    setTimeout(() => {
-      setAlerta("");
-    }, 3000);
+      setTimeout(() => {
+        setAlerta("");
+      }, 3000);
 
-    return;
-  }
+      return;
+    }
 
-  navigate(`/factura/${ventaId}`);
-};
+    // Ya no navegamos a /factura/:ventaId.
+    // Abrimos la factura dentro del modal.
+    setFacturaModal(ventaId);
+  };
+
+  // =========================================================
+  // DESCARGAR FACTURA
+  // =========================================================
+
+  const descargarFactura = async (venta) => {
+    const ventaId = obtenerIdVenta(venta);
+
+    if (!ventaId) {
+      setAlerta("No se encontró el identificador de la compra.");
+
+      setTimeout(() => {
+        setAlerta("");
+      }, 3000);
+
+      return;
+    }
+
+    try {
+      const respuesta = await fetch(
+        `${API_URL}/ventas/${ventaId}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok) {
+        throw new Error(
+          datos.detail || "No se pudo obtener la factura."
+        );
+      }
+
+      await generarFacturaPDF(datos);
+    } catch (error) {
+      console.error("Error descargando factura:", error);
+
+      setAlerta(
+        error.message || "No se pudo generar el PDF de la factura."
+      );
+
+      setTimeout(() => {
+        setAlerta("");
+      }, 3000);
+    }
+  };
+
+  // =========================================================
+  // RENDER
+  // =========================================================
 
   return (
     <EstructuraPanel rol="cliente" titulo="Cliente">
       <Alerta
-    mensaje={alerta}
-    tipo="error"
-  />
+        mensaje={alerta}
+        tipo="error"
+      />
+
       <section className="min-h-screen bg-[#EFE8DF] px-4 py-8 sm:px-6 md:px-8 md:py-12">
         <div className="mx-auto max-w-6xl">
 
-          
-
-          {/* CABECERA */}
+          {/* =================================================
+              CABECERA
+          ================================================= */}
 
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -166,11 +262,14 @@ export default function ClienteVentas() {
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#D8BA98] bg-[#F8F3EA] px-4 py-2.5 text-sm font-semibold text-[#7F0303] shadow-sm transition hover:border-[#D4AF37] hover:bg-[#D4AF37]/10"
             >
               <ArrowLeft size={17} />
+
               Volver al panel
             </button>
           </div>
 
-          {/* CONTENEDOR PRINCIPAL */}
+          {/* =================================================
+              CONTENEDOR PRINCIPAL
+          ================================================= */}
 
           <div className="overflow-hidden rounded-[2.5rem] border border-[#D4AF37]/25 bg-[#F8F3EA] shadow-md">
 
@@ -210,12 +309,17 @@ export default function ClienteVentas() {
 
             <div className="p-7 md:p-9">
 
-              {/* CARGANDO */}
+              {/* =================================================
+                  CARGANDO
+              ================================================= */}
 
               {cargando && (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#7F0303] text-white">
-                    <RefreshCw size={28} className="animate-spin" />
+                    <RefreshCw
+                      size={28}
+                      className="animate-spin"
+                    />
                   </div>
 
                   <h3 className="mt-5 font-serif text-2xl font-bold text-[#7F0303]">
@@ -228,7 +332,9 @@ export default function ClienteVentas() {
                 </div>
               )}
 
-              {/* ERROR */}
+              {/* =================================================
+                  ERROR
+              ================================================= */}
 
               {!cargando && error && (
                 <div className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center">
@@ -251,12 +357,15 @@ export default function ClienteVentas() {
                     className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#7F0303] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#5F0202]"
                   >
                     <RefreshCw size={16} />
+
                     Intentar nuevamente
                   </button>
                 </div>
               )}
 
-              {/* SIN COMPRAS */}
+              {/* =================================================
+                  SIN COMPRAS
+              ================================================= */}
 
               {!cargando &&
                 !error &&
@@ -281,12 +390,15 @@ export default function ClienteVentas() {
                       className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#7F0303] px-5 py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#5F0202]"
                     >
                       <Package size={17} />
+
                       Ver productos
                     </button>
                   </div>
                 )}
 
-              {/* LISTA DE COMPRAS */}
+              {/* =================================================
+                  LISTA DE COMPRAS
+              ================================================= */}
 
               {!cargando &&
                 !error &&
@@ -294,8 +406,10 @@ export default function ClienteVentas() {
                   <div className="space-y-4">
                     {ventas.map((venta) => {
                       const ventaId = obtenerIdVenta(venta);
+
                       const numeroFactura =
                         obtenerNumeroFactura(venta);
+
                       const fecha = obtenerFecha(venta);
 
                       const subtotal = Number(
@@ -343,6 +457,7 @@ export default function ClienteVentas() {
                               <div className="mt-4 flex flex-col gap-2 text-sm text-[#765E52] sm:flex-row sm:flex-wrap sm:gap-x-6">
                                 <span className="inline-flex items-center gap-2">
                                   <CalendarDays size={15} />
+
                                   {formatearFecha(fecha)}
                                 </span>
 
@@ -405,26 +520,35 @@ export default function ClienteVentas() {
                                 </div>
                               </div>
 
+                              {/* BOTONES */}
+
                               <div className="flex flex-wrap gap-2">
+
                                 <button
                                   type="button"
-                                  onClick={() => verFactura(venta)}
+                                  onClick={() =>
+                                    verFactura(venta)
+                                  }
                                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#7F0303] px-5 py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#5F0202]"
                                 >
                                   <Eye size={17} />
+
                                   Ver factura
                                 </button>
 
                                 <button
                                   type="button"
-                                  onClick={() => descargarFactura(venta)}
+                                  onClick={() =>
+                                    descargarFactura(venta)
+                                  }
                                   className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#7F0303] px-5 py-3 text-sm font-bold text-[#7F0303] transition hover:bg-[#F8EDE7]"
                                 >
                                   <Download size={17} />
+
                                   Descargar PDF
                                 </button>
-                              </div>
 
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -432,10 +556,23 @@ export default function ClienteVentas() {
                     })}
                   </div>
                 )}
+
             </div>
           </div>
         </div>
       </section>
+
+      {/* =====================================================
+          MODAL DE FACTURA
+      ===================================================== */}
+
+      {facturaModal && (
+        <Factura
+          ventaIdProp={facturaModal}
+          modoModal={true}
+          onCerrar={() => setFacturaModal(null)}
+        />
+      )}
     </EstructuraPanel>
   );
 }

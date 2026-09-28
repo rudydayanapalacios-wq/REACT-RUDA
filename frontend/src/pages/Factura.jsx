@@ -14,22 +14,63 @@ import {
 } from "lucide-react";
 
 import { useNavigate, useParams } from "react-router-dom";
+
 import { useAuth } from "../context/AuthContext";
+
 import { generarFacturaPDF } from "../utils/generarFacturaPDF";
+
+import Alerta from "../components/Alerta";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-export default function Factura() {
-  const { ventaId } = useParams();
+export default function Factura({
+  ventaIdProp = null,
+  modoModal = false,
+  onCerrar = null,
+}) {
+  const { ventaId: ventaIdRuta } = useParams();
+
+  const ventaId = ventaIdProp || ventaIdRuta;
+
   const navigate = useNavigate();
+
   const { token } = useAuth();
 
   const [factura, setFactura] = useState(null);
+
   const [error, setError] = useState("");
+
   const [cargando, setCargando] = useState(true);
+
   const [descargando, setDescargando] = useState(false);
 
+  const [alerta, setAlerta] = useState("");
+
   const facturaRef = useRef(null);
+
+  // =========================================================
+  // CERRAR MODAL CON ESC
+  // =========================================================
+
+  useEffect(() => {
+    if (!modoModal) {
+      return;
+    }
+
+    const manejarTecla = (evento) => {
+      if (evento.key === "Escape") {
+        if (onCerrar) {
+          onCerrar();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", manejarTecla);
+
+    return () => {
+      window.removeEventListener("keydown", manejarTecla);
+    };
+  }, [modoModal, onCerrar]);
 
   // =========================================================
   // CARGAR FACTURA
@@ -146,6 +187,31 @@ export default function Factura() {
   };
 
   // =========================================================
+  // MOSTRAR ALERTA
+  // =========================================================
+
+  const mostrarAlerta = (mensaje) => {
+    setAlerta(mensaje);
+
+    setTimeout(() => {
+      setAlerta("");
+    }, 3000);
+  };
+
+  // =========================================================
+  // CERRAR FACTURA
+  // =========================================================
+
+  const cerrarFactura = () => {
+    if (modoModal && onCerrar) {
+      onCerrar();
+      return;
+    }
+
+    navigate(-1);
+  };
+
+  // =========================================================
   // IMPRIMIR FACTURA
   // =========================================================
 
@@ -155,7 +221,7 @@ export default function Factura() {
     );
 
     if (!factura) {
-      alert(
+      mostrarAlerta(
         "La factura todavía no está cargada."
       );
       return;
@@ -174,7 +240,7 @@ export default function Factura() {
     );
 
     if (!factura) {
-      alert(
+      mostrarAlerta(
         "La factura todavía no está cargada."
       );
       return;
@@ -203,7 +269,7 @@ export default function Factura() {
         errorPDF
       );
 
-      alert(
+      mostrarAlerta(
         "No se pudo generar el PDF. Revisa la consola del navegador."
       );
     } finally {
@@ -219,7 +285,18 @@ export default function Factura() {
 
   if (cargando) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#EFE8DF]">
+      <main
+        className={
+          modoModal
+            ? "fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+            : "flex min-h-screen items-center justify-center bg-[#EFE8DF]"
+        }
+      >
+        <Alerta
+          mensaje={alerta}
+          tipo="error"
+        />
+
         <div className="rounded-3xl border border-[#D8BA98] bg-[#F8F3EA] px-10 py-8 text-center shadow-lg">
           <ReceiptText
             size={40}
@@ -244,7 +321,18 @@ export default function Factura() {
 
   if (error) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#EFE8DF] px-4">
+      <main
+        className={
+          modoModal
+            ? "fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm"
+            : "flex min-h-screen items-center justify-center bg-[#EFE8DF] px-4"
+        }
+      >
+        <Alerta
+          mensaje={alerta}
+          tipo="error"
+        />
+
         <div className="max-w-md rounded-3xl border border-red-200 bg-red-50 p-8 text-center shadow-lg">
           <ReceiptText
             size={40}
@@ -261,11 +349,12 @@ export default function Factura() {
 
           <button
             type="button"
-            onClick={() => navigate(-1)}
+            onClick={cerrarFactura}
             className="mx-auto mt-6 flex items-center gap-2 rounded-xl bg-[#7F0303] px-5 py-3 text-sm font-bold text-white"
           >
             <ArrowLeft size={17} />
-            Volver
+
+            {modoModal ? "Cerrar" : "Volver"}
           </button>
         </div>
       </main>
@@ -333,8 +422,7 @@ export default function Factura() {
   // DATOS DEL CLIENTE
   // =========================================================
 
-  const cliente =
-    factura.cliente || null;
+  const cliente = factura.cliente || null;
 
   const nombreCliente =
     typeof cliente === "string"
@@ -382,8 +470,55 @@ export default function Factura() {
   // =========================================================
 
   return (
-    <main className="min-h-screen bg-[#EFE8DF] px-4 py-8 print:bg-white print:p-0">
-      <div className="mx-auto max-w-4xl">
+    <main
+      className={
+        modoModal
+          ? "fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          : "min-h-screen bg-[#EFE8DF] px-4 py-8 print:bg-white print:p-0"
+      }
+    >
+      <Alerta
+        mensaje={alerta}
+        tipo="error"
+      />
+
+      <div
+        className={
+          modoModal
+            ? "relative flex max-h-[95vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem]"
+            : "mx-auto max-w-4xl"
+        }
+      >
+        {/* BOTÓN CERRAR MODAL */}
+        {modoModal && (
+          <button
+            type="button"
+            onClick={cerrarFactura}
+            className="
+              absolute
+              right-4
+              top-4
+              z-[60]
+              flex
+              h-10
+              w-10
+              items-center
+              justify-center
+              rounded-full
+              bg-[#F8F3EA]
+              text-2xl
+              font-bold
+              text-[#7F0303]
+              shadow-lg
+              transition
+              hover:bg-[#D4AF37]
+              hover:text-[#3D1717]
+            "
+            aria-label="Cerrar factura"
+          >
+            ×
+          </button>
+        )}
 
         {/* ===================================================
             BOTONES
@@ -392,15 +527,15 @@ export default function Factura() {
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3 print:hidden">
           <button
             type="button"
-            onClick={() => navigate(-1)}
+            onClick={cerrarFactura}
             className="flex items-center gap-2 rounded-xl border border-[#D8BA98] bg-[#F8F3EA] px-4 py-2.5 text-sm font-semibold text-[#7F0303] transition hover:bg-white"
           >
             <ArrowLeft size={17} />
-            Volver
+
+            {modoModal ? "Cerrar" : "Volver"}
           </button>
 
           <div className="flex flex-wrap gap-2">
-
             {/* IMPRIMIR */}
 
             <button
@@ -409,6 +544,7 @@ export default function Factura() {
               className="flex items-center gap-2 rounded-xl border border-[#7F0303] bg-white px-4 py-2.5 text-sm font-bold text-[#7F0303] transition hover:bg-[#7F0303] hover:text-white"
             >
               <Printer size={17} />
+
               Imprimir factura
             </button>
 
@@ -436,29 +572,30 @@ export default function Factura() {
         <article
           ref={facturaRef}
           className="
-            overflow-hidden
+            max-h-[95vh]
+            overflow-y-auto
+            overflow-x-hidden
             rounded-[2rem]
             border
             border-[#D8BA98]
             bg-[#F8F3EA]
             shadow-xl
+            print:max-h-none
+            print:overflow-visible
             print:rounded-none
             print:border-0
             print:bg-white
             print:shadow-none
           "
         >
-
           {/* =================================================
               ENCABEZADO
           ================================================= */}
 
           <div className="bg-[#7F0303] px-8 py-8 text-white sm:px-10">
             <div className="flex flex-col justify-between gap-8 sm:flex-row sm:items-start">
-
               <div>
                 <div className="flex items-center gap-3">
-
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10">
                     <Store size={25} />
                   </div>
@@ -511,7 +648,6 @@ export default function Factura() {
           ================================================= */}
 
           <div className="grid gap-5 border-b border-[#D8BA98] p-8 sm:grid-cols-2 sm:px-10">
-
             {/* DATOS DEL CLIENTE */}
 
             <div className="rounded-2xl border border-[#D8BA98]/70 bg-white/60 p-5">
@@ -593,7 +729,6 @@ export default function Factura() {
           ================================================= */}
 
           <div className="px-8 py-8 sm:px-10">
-
             <div className="mb-5">
               <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#D4AF37]">
                 Detalle
@@ -621,10 +756,8 @@ export default function Factura() {
             </div>
 
             <div className="divide-y divide-[#D8BA98]/50">
-
               {detalles.length > 0 ? (
                 detalles.map((detalle, index) => {
-
                   const nombreProducto =
                     typeof detalle.producto === "object"
                       ? detalle.producto?.nombre
@@ -661,7 +794,6 @@ export default function Factura() {
                       }
                       className="grid gap-3 py-5 sm:grid-cols-[1fr_auto_auto_auto] sm:items-center sm:gap-4"
                     >
-
                       <div>
                         <p className="font-semibold text-[#3D1717]">
                           {nombreProducto}
@@ -717,7 +849,6 @@ export default function Factura() {
 
           <div className="border-t border-[#D8BA98] bg-[#EFE8DF]/50 px-8 py-7 sm:px-10">
             <div className="ml-auto max-w-sm">
-
               {/* SUBTOTAL */}
 
               <div className="flex items-center justify-between border-b border-[#D8BA98]/70 pb-3 text-sm">
@@ -783,7 +914,6 @@ export default function Factura() {
             </p>
 
             <div className="mt-5 flex flex-wrap justify-center gap-3">
-
               <span className="rounded-full bg-[#EFE8DF] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#765E52]">
                 MUGI STORE
               </span>
@@ -791,17 +921,18 @@ export default function Factura() {
               <span className="rounded-full bg-[#D4AF37]/15 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#7F0303]">
                 Comprobante de venta
               </span>
-
             </div>
           </footer>
         </article>
 
-        <div className="mt-5 text-center print:hidden">
-          <p className="text-xs text-[#927E70]">
-            Puedes imprimir la factura o
-            descargarla directamente en PDF.
-          </p>
-        </div>
+        {!modoModal && (
+          <div className="mt-5 text-center print:hidden">
+            <p className="text-xs text-[#927E70]">
+              Puedes imprimir la factura o
+              descargarla directamente en PDF.
+            </p>
+          </div>
+        )}
       </div>
     </main>
   );
