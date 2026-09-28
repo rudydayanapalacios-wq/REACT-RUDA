@@ -2,9 +2,17 @@ from fastapi import APIRouter
 from pydantic import BaseModel, Field
 from openai import OpenAI
 from dotenv import load_dotenv
+
+from sqlalchemy.orm import Session
+from sqlalchemy import or_
+
 import os
 import re
 import unicodedata
+from decimal import Decimal
+
+from ..database import SessionLocal
+from ..models import Producto
 
 
 # ==========================================================
@@ -47,11 +55,8 @@ class ChatbotResponse(BaseModel):
 
 def normalizar_texto(texto: str) -> str:
     """
-    Convierte el texto a minúsculas y elimina tildes.
-    Esto permite detectar preguntas como:
-    ¿Qué productos tienen?
-    que productos tienen
-    QUE PRODUCTOS TIENEN
+    Convierte el texto a minúsculas, elimina tildes
+    y caracteres innecesarios.
     """
 
     texto = texto.lower().strip()
@@ -67,8 +72,17 @@ def normalizar_texto(texto: str) -> str:
         if unicodedata.category(caracter) != "Mn"
     )
 
-    texto = re.sub(r"[^a-z0-9\s]", " ", texto)
-    return re.sub(r"\s+", " ", texto).strip()
+    texto = re.sub(
+        r"[^a-z0-9\s]",
+        " ",
+        texto
+    )
+
+    return re.sub(
+        r"\s+",
+        " ",
+        texto
+    ).strip()
 
 
 def contiene_alguna(texto: str, palabras: list[str]) -> bool:
@@ -82,240 +96,543 @@ def contiene_alguna(texto: str, palabras: list[str]) -> bool:
     )
 
 
-def respuesta_intencion_especifica(texto: str) -> str | None:
-    """Resuelve primero preguntas que podrían coincidir con categorías amplias."""
+def formatear_precio(precio) -> str:
+    """
+    Convierte el precio de la BD a formato colombiano.
+    Ejemplo: 65000 -> $65.000
+    """
 
-    if contiene_alguna(
+    try:
+        valor = int(Decimal(str(precio)))
+        return f"${valor:,.0f}".replace(",", ".")
+    except Exception:
+        return str(precio)
+
+
+# ==========================================================
+# DETECTAR SI LA PREGUNTA HABLA DE PRODUCTOS
+# ==========================================================
+
+def es_pregunta_producto(texto: str) -> bool:
+
+    palabras_producto = [
+        "producto",
+        "productos",
+        "catalogo",
+        "catalog",
+        "articulo",
+        "articulos",
+        "accesorio",
+        "accesorios",
+        "collar",
+        "collares",
+        "pulsera",
+        "pulseras",
+        "anillo",
+        "anillos",
+        "arete",
+        "aretes",
+        "katana",
+        "joya",
+        "joyas",
+        "stock",
+        "disponible",
+        "disponibilidad",
+        "unidades",
+        "cuesta",
+        "cuanto vale",
+        "precio",
+        "precios",
+        "barato",
+        "economico",
+        "economicos"
+    ]
+
+    return contiene_alguna(
         texto,
-        [
-            "historia de mugi",
-            "historia de mugi store",
-            "cuentame la historia",
-            "cuentame un poco de la historia",
-            "cuentame sobre mugi",
-            "origen de mugi",
-            "como nacio mugi",
-            "cuando se fundo mugi",
-            "por que se llama mugi",
-        ],
-    ):
-        return (
-            "MUGI STORE nació como una propuesta para convertir la pasión por "
-            "las aventuras y los accesorios inspirados en One Piece en una "
-            "experiencia de compra cercana para los fans. Su nombre hace "
-            "referencia a los Mugiwara, la tripulación del sombrero de paja. "
-            "La tienda busca reunir productos con identidad, revisar cada "
-            "compra con cuidado y ayudar a que cada cliente lleve consigo una "
-            "parte de su propia aventura."
+        palabras_producto
+    )
+
+
+# ==========================================================
+# CONSULTAR PRODUCTOS EN LA BASE DE DATOS
+# ==========================================================
+
+def obtener_productos_activos(db: Session):
+    """
+    Obtiene únicamente productos activos.
+    """
+
+    return (
+        db.query(Producto)
+        .filter(Producto.estado == True)
+        .order_by(Producto.nombre.asc())
+        .all()
+    )
+
+
+def buscar_productos(
+    db: Session,
+    texto: str
+):
+    """
+    Busca productos activos utilizando palabras relevantes
+    de la pregunta.
+    """
+
+    productos = obtener_productos_activos(db)
+
+    palabras = [
+        palabra
+        for palabra in texto.split()
+        if len(palabra) >= 3
+    ]
+
+    resultados = []
+
+    for producto in productos:
+
+        nombre = normalizar_texto(
+            producto.nombre or ""
         )
 
-    if contiene_alguna(
-        texto,
-        [
-            "producto barato",
-            "productos baratos",
-            "mas barato",
-            "mas economico",
-            "economico",
-            "economicos",
-            "bajo presupuesto",
-            "presupuesto bajo",
-            "oferta",
-            "ofertas",
-            "descuento",
-            "descuentos",
-        ],
-    ):
-        return (
-            "Si buscas una opción económica, entra a Productos y compara los "
-            "precios de los artículos disponibles, empezando por los valores "
-            "más bajos. Como el catálogo y el stock pueden cambiar, revisa "
-            "siempre el precio actual antes de agregar un producto al carrito. "
-            "También puedes decirme qué tipo de accesorio buscas y cuánto "
-            "quieres gastar para orientarte mejor."
+        descripcion = normalizar_texto(
+            producto.descripcion or ""
         )
 
-    if contiene_alguna(
-        texto,
-        [
-            "tengo un presupuesto",
-            "mi presupuesto",
-            "puedo gastar",
-            "presupuesto de",
-            "con cuanto dinero",
-            "cuanto puedo gastar",
-        ],
-    ):
-        return (
-            "Puedo ayudarte a buscar dentro de tu presupuesto. Dime cuánto "
-            "quieres gastar y si prefieres un collar, pulsera, anillo u otro "
-            "accesorio. Después revisa el catálogo para confirmar el precio y "
-            "la disponibilidad actual de cada opción."
+        coincidencias = 0
+
+        for palabra in palabras:
+
+            if palabra in nombre:
+                coincidencias += 3
+
+            elif palabra in descripcion:
+                coincidencias += 1
+
+        if coincidencias > 0:
+            resultados.append(
+                (
+                    coincidencias,
+                    producto
+                )
+            )
+
+    resultados.sort(
+        key=lambda item: (
+            -item[0],
+            normalizar_texto(
+                item[1].nombre or ""
+            )
+        )
+    )
+
+    return [
+        producto
+        for _, producto in resultados
+    ]
+
+
+# ==========================================================
+# DETECTAR PRODUCTO ESPECÍFICO
+# ==========================================================
+
+def buscar_producto_por_nombre(
+    db: Session,
+    texto: str
+):
+    """
+    Intenta encontrar un producto específico dentro
+    de la pregunta.
+    """
+
+    productos = obtener_productos_activos(db)
+
+    texto_normalizado = normalizar_texto(texto)
+
+    coincidencias = []
+
+    for producto in productos:
+
+        nombre = normalizar_texto(
+            producto.nombre or ""
         )
 
-    if contiene_alguna(
+        if not nombre:
+            continue
+
+        if nombre in texto_normalizado:
+            coincidencias.append(producto)
+
+    if len(coincidencias) == 1:
+        return coincidencias[0]
+
+    if len(coincidencias) > 1:
+        return coincidencias[0]
+
+    return None
+
+
+# ==========================================================
+# RESPUESTA SOBRE PRODUCTOS
+# ==========================================================
+
+def respuesta_productos(
+    mensaje: str,
+    db: Session
+) -> str | None:
+
+    texto = normalizar_texto(mensaje)
+
+    if not es_pregunta_producto(texto):
+        return None
+
+    # ------------------------------------------------------
+    # LISTAR TODOS LOS PRODUCTOS
+    # ------------------------------------------------------
+
+    quiere_listar = contiene_alguna(
         texto,
         [
-            "regalo",
-            "regalar",
-            "para mi novia",
-            "para mi novio",
-            "para una amiga",
-            "para un amigo",
-            "cumpleanos",
-            "cumpleaños",
-        ],
-    ):
-        return (
-            "Para elegir un regalo, piensa primero en el estilo de la persona "
-            "y en tu presupuesto. Un collar o una pulsera pueden ser opciones "
-            "versátiles, mientras que un accesorio temático puede tener un "
-            "significado especial para un fan. Revisa las fotos, descripción, "
-            "precio y stock en Productos antes de comprar."
+            "que productos tienen",
+            "que productos venden",
+            "que tienen",
+            "que venden",
+            "catalogo",
+            "catalog",
+            "lista de productos",
+            "productos disponibles",
+            "productos tienen disponibles",
+            "que accesorios tienen"
+        ]
+    )
+
+    if quiere_listar:
+
+        productos = obtener_productos_activos(db)
+
+        if not productos:
+            return (
+                "Actualmente no hay productos activos "
+                "disponibles en el catálogo."
+            )
+
+        lineas = []
+
+        for producto in productos[:15]:
+
+            disponibilidad = (
+                f"{producto.stock} unidades"
+                if producto.stock > 0
+                else "agotado"
+            )
+
+            lineas.append(
+                f"• {producto.nombre} — "
+                f"{formatear_precio(producto.precio)} "
+                f"({disponibilidad})"
+            )
+
+        respuesta = (
+            "Estos son algunos de los productos disponibles "
+            "actualmente en MUGI STORE:\n\n"
+            + "\n".join(lineas)
         )
 
-    if contiene_alguna(
-        texto,
-        [
-            "de que material",
-            "materiales",
-            "material del producto",
-            "como cuido",
-            "como cuidar",
-            "cuidado de la joya",
-            "cuidar la joya",
-            "se oxida",
-        ],
-    ):
-        return (
-            "La información del material debe revisarse en la descripción de "
-            "cada producto. Para conservar tus accesorios, evita el contacto "
-            "con agua, perfumes y productos químicos; guárdalos secos, limpios "
-            "y separados para reducir rayones. Si necesitas confirmar un "
-            "material específico, revisa la ficha del artículo o contáctanos."
+        if len(productos) > 15:
+            respuesta += (
+                "\n\nHay más productos en el catálogo. "
+                "Puedes consultar la sección Productos para "
+                "verlos todos."
+            )
+
+        return respuesta
+
+    # ------------------------------------------------------
+    # BUSCAR PRODUCTO ESPECÍFICO
+    # ------------------------------------------------------
+
+    producto = buscar_producto_por_nombre(
+        db,
+        texto
+    )
+
+    # ------------------------------------------------------
+    # SI NO ENCONTRÓ NOMBRE EXACTO, BUSCAR POR PALABRAS
+    # ------------------------------------------------------
+
+    resultados = []
+
+    if not producto:
+        resultados = buscar_productos(
+            db,
+            texto
         )
 
-    if contiene_alguna(
-        texto,
-        [
-            "como elegir",
-            "que producto elegir",
-            "cual producto compro",
-            "ayudame a elegir",
-            "ayuda para elegir",
-        ],
-    ):
-        return (
-            "Para elegir un producto, considera tres cosas: el tipo de "
-            "accesorio que prefieres, el presupuesto disponible y el uso que "
-            "le darás. En Productos puedes comparar la imagen, descripción, "
-            "precio y disponibilidad antes de añadirlo al carrito."
-        )
+    # ------------------------------------------------------
+    # PREGUNTAS SOBRE PRECIO
+    # ------------------------------------------------------
 
-    if contiene_alguna(
+    pregunta_precio = contiene_alguna(
         texto,
         [
             "precio",
             "precios",
             "cuanto cuesta",
             "cuanto vale",
+            "cuanto valen",
             "valor",
-            "valen",
-        ],
-    ):
+            "cuesta",
+            "vale"
+        ]
+    )
+
+    if pregunta_precio:
+
+        if producto:
+
+            return (
+                f"El {producto.nombre} tiene un precio de "
+                f"{formatear_precio(producto.precio)}."
+            )
+
+        if len(resultados) == 1:
+
+            producto = resultados[0]
+
+            return (
+                f"El {producto.nombre} tiene un precio de "
+                f"{formatear_precio(producto.precio)}."
+            )
+
+        if len(resultados) > 1:
+
+            nombres = [
+                producto.nombre
+                for producto in resultados[:5]
+            ]
+
+            return (
+                "Encontré varios productos que podrían "
+                "corresponder a tu pregunta:\n\n"
+                + "\n".join(
+                    f"• {nombre}"
+                    for nombre in nombres
+                )
+                + "\n\nDime el nombre del producto "
+                  "que quieres consultar."
+            )
+
         return (
-            "El precio depende del producto que te interese. 💰 Puedes abrir "
-            "la sección Productos para ver el valor actualizado de cada artículo "
-            "y agregarlo al carrito."
+            "No encontré un producto específico relacionado "
+            "con tu pregunta. Dime el nombre del producto "
+            "y puedo consultar su precio actual."
         )
 
-    if contiene_alguna(
+    # ------------------------------------------------------
+    # PREGUNTAS SOBRE STOCK
+    # ------------------------------------------------------
+
+    pregunta_stock = contiene_alguna(
         texto,
         [
             "stock",
             "disponible",
             "disponibilidad",
             "hay unidades",
+            "cuantas unidades",
+            "cuantas quedan",
+            "cuanto queda",
             "queda",
-        ],
-    ):
+            "tienen unidades"
+        ]
+    )
+
+    if pregunta_stock:
+
+        if producto:
+
+            if producto.stock > 0:
+
+                return (
+                    f"Sí. {producto.nombre} está disponible "
+                    f"actualmente y quedan "
+                    f"{producto.stock} unidades."
+                )
+
+            return (
+                f"{producto.nombre} está actualmente agotado."
+            )
+
+        if len(resultados) == 1:
+
+            producto = resultados[0]
+
+            if producto.stock > 0:
+
+                return (
+                    f"Sí. {producto.nombre} está disponible "
+                    f"actualmente y quedan "
+                    f"{producto.stock} unidades."
+                )
+
+            return (
+                f"{producto.nombre} está actualmente agotado."
+            )
+
+        if len(resultados) > 1:
+
+            nombres = [
+                producto.nombre
+                for producto in resultados[:5]
+            ]
+
+            return (
+                "Encontré varios productos relacionados:\n\n"
+                + "\n".join(
+                    f"• {nombre}"
+                    for nombre in nombres
+                )
+                + "\n\nDime cuál quieres consultar "
+                  "y te indico su disponibilidad."
+            )
+
         return (
-            "La disponibilidad puede variar por producto. Revisa la sección "
-            "Productos para consultar las unidades disponibles antes de comprar."
+            "No encontré un producto específico para "
+            "consultar su disponibilidad. Dime el nombre "
+            "del producto que buscas."
         )
 
-    if contiene_alguna(
+    # ------------------------------------------------------
+    # PRODUCTO ESPECÍFICO SIN PREGUNTA DE PRECIO/STOCK
+    # ------------------------------------------------------
+
+    if producto:
+
+        descripcion = (
+            producto.descripcion
+            if producto.descripcion
+            else "No hay una descripción registrada."
+        )
+
+        disponibilidad = (
+            f"{producto.stock} unidades disponibles"
+            if producto.stock > 0
+            else "actualmente agotado"
+        )
+
+        return (
+            f"Encontré este producto en MUGI STORE:\n\n"
+            f"🛍️ {producto.nombre}\n"
+            f"💰 Precio: {formatear_precio(producto.precio)}\n"
+            f"📦 Disponibilidad: {disponibilidad}\n"
+            f"📝 {descripcion}"
+        )
+
+    # ------------------------------------------------------
+    # RECOMENDACIONES
+    # ------------------------------------------------------
+
+    pregunta_recomendacion = contiene_alguna(
         texto,
         [
             "recomiendame",
             "que me recomiendas",
-            "que producto me recomiendas",
             "cual me recomiendas",
-        ],
-    ):
+            "que producto compro",
+            "que producto elegir",
+            "ayudame a elegir",
+            "quiero un regalo",
+            "busco un regalo"
+        ]
+    )
+
+    if pregunta_recomendacion:
+
+        productos = obtener_productos_activos(db)
+
+        disponibles = [
+            producto
+            for producto in productos
+            if producto.stock > 0
+        ]
+
+        if not disponibles:
+            return (
+                "Actualmente no encuentro productos con "
+                "stock disponible para recomendarte."
+            )
+
+        opciones = disponibles[:5]
+
         return (
-            "¡Claro! ✨ Para recomendarte mejor, dime qué tipo de accesorio "
-            "buscas o tu presupuesto. También puedes revisar el catálogo "
-            "en Productos y comparar precios, descripción y disponibilidad."
+            "Claro. Estas son algunas opciones disponibles "
+            "actualmente:\n\n"
+            + "\n".join(
+                f"• {producto.nombre} — "
+                f"{formatear_precio(producto.precio)}"
+                for producto in opciones
+            )
+            + "\n\nSi me dices tu presupuesto o el tipo "
+              "de accesorio que buscas, puedo orientarte mejor."
         )
 
-    if contiene_alguna(
+    # ------------------------------------------------------
+    # PREGUNTA POR PRODUCTO BARATO
+    # ------------------------------------------------------
+
+    pregunta_barato = contiene_alguna(
         texto,
         [
-            "estado de mi compra",
-            "estado de mi venta",
-            "como va mi compra",
-            "donde esta mi pedido",
-            "seguimiento de mi pedido",
-        ],
-    ):
-        return (
-            "Para revisar el estado de una compra, inicia sesión y entra a "
-            "tu panel de cliente. Allí podrás consultar las ventas registradas "
-            "y la información disponible de tu pedido."
+            "mas barato",
+            "mas economico",
+            "mas barata",
+            "mas economica",
+            "producto barato",
+            "producto economico",
+            "menor precio",
+            "precio mas bajo"
+        ]
+    )
+
+    if pregunta_barato:
+
+        productos = [
+            producto
+            for producto in obtener_productos_activos(db)
+            if producto.stock > 0
+        ]
+
+        if not productos:
+            return (
+                "No encuentro productos disponibles "
+                "para comparar en este momento."
+            )
+
+        producto_mas_barato = min(
+            productos,
+            key=lambda producto: Decimal(
+                str(producto.precio)
+            )
         )
 
-    if contiene_alguna(
-        texto,
-        [
-            "crear pqr",
-            "hacer pqr",
-            "poner una pqr",
-            "registrar una pqr",
-            "enviar una pqr",
-        ],
-    ):
         return (
-            "Para crear una PQR, inicia sesión, entra a la sección PQR y "
-            "completa el tipo, asunto y descripción. Incluye datos claros "
-            "para que el equipo pueda atender tu solicitud."
-        )
-
-    if contiene_alguna(
-        texto,
-        [
-            "producto danado",
-            "llego danado",
-            "producto defectuoso",
-        ],
-    ):
-        return (
-            "Si recibiste un producto dañado o defectuoso, registra una PQR "
-            "con el número de tu compra y una descripción del inconveniente. "
-            "El equipo revisará tu caso."
+            f"El producto disponible con menor precio "
+            f"actualmente es {producto_mas_barato.nombre}, "
+            f"con un valor de "
+            f"{formatear_precio(producto_mas_barato.precio)}."
         )
 
     return None
 
 
+# ==========================================================
+# FAQ MUGI
+# ==========================================================
+
 def respuesta_faq(mensaje: str) -> str:
 
     texto = normalizar_texto(mensaje)
-
-    respuesta_prioritaria = respuesta_intencion_especifica(texto)
-
-    if respuesta_prioritaria:
-        return respuesta_prioritaria
 
     # ======================================================
     # SALUDOS
@@ -331,15 +648,14 @@ def respuesta_faq(mensaje: str) -> str:
             "buenos dias",
             "buenas tardes",
             "buenas noches",
-            "hey",
-            "que tal"
+            "hey"
         ]
     ):
         return (
-            "¡Hola! 👋 Soy MUGI IA, el asistente virtual de "
-            "MUGI STORE. Puedo ayudarte con productos, "
-            "compras, carrito, facturas, PQR y preguntas "
-            "frecuentes. ¿Qué necesitas?"
+            "¡Hola! 👋 Soy MUGI IA, el asistente virtual "
+            "de MUGI STORE. Puedo ayudarte con productos, "
+            "compras, carrito, facturas, PQR y el funcionamiento "
+            "de la plataforma. ¿Qué necesitas?"
         )
 
     # ======================================================
@@ -357,8 +673,7 @@ def respuesta_faq(mensaje: str) -> str:
         ]
     ):
         return (
-            "¡Hasta luego! 👋 Gracias por visitar MUGI STORE. "
-            "Cuando necesites ayuda, aquí estaré."
+            "¡Hasta luego! 👋 Gracias por visitar MUGI STORE."
         )
 
     # ======================================================
@@ -374,13 +689,12 @@ def respuesta_faq(mensaje: str) -> str:
         ]
     ):
         return (
-            "¡Con mucho gusto! 😊 Me alegra poder ayudarte. "
-            "Si tienes otra pregunta sobre MUGI STORE, "
-            "puedes escribirme."
+            "¡Con mucho gusto! 😊 Si tienes otra pregunta "
+            "sobre MUGI STORE, puedes escribirme."
         )
 
     # ======================================================
-    # IDENTIDAD DEL CHATBOT
+    # IDENTIDAD
     # ======================================================
 
     if contiene_alguna(
@@ -390,19 +704,41 @@ def respuesta_faq(mensaje: str) -> str:
             "que eres",
             "eres una ia",
             "eres un robot",
-            "eres humano",
             "como te llamas"
         ]
     ):
         return (
             "Soy MUGI IA 🤖, el asistente virtual de "
             "MUGI STORE. Estoy integrado en la plataforma "
-            "para brindar atención inicial y orientar a los "
-            "clientes."
+            "para orientar a los usuarios."
         )
 
     # ======================================================
-    # INFORMACIÓN DE MUGI
+    # HISTORIA DE MUGI
+    # ======================================================
+
+    if contiene_alguna(
+        texto,
+        [
+            "historia de mugi",
+            "historia de mugi store",
+            "origen de mugi",
+            "como nacio mugi",
+            "cuando se fundo mugi",
+            "por que se llama mugi"
+        ]
+    ):
+        return (
+            "MUGI STORE nació como una propuesta para "
+            "convertir la pasión por las aventuras y los "
+            "accesorios inspirados en One Piece en una "
+            "experiencia de compra cercana para los fans. "
+            "Su nombre hace referencia a los Mugiwara, "
+            "la tripulación del sombrero de paja."
+        )
+
+    # ======================================================
+    # INFORMACIÓN GENERAL DE MUGI
     # ======================================================
 
     if contiene_alguna(
@@ -416,145 +752,10 @@ def respuesta_faq(mensaje: str) -> str:
         ]
     ):
         return (
-            "MUGI STORE es una tienda de accesorios y joyería. "
-            "En nuestra plataforma puedes consultar productos, "
-            "agregarlos al carrito, realizar compras, consultar "
-            "facturas y gestionar solicitudes PQR."
-        )
-
-    # ======================================================
-    # PRODUCTOS
-    # ======================================================
-
-    if contiene_alguna(
-        texto,
-        [
-            "productos",
-            "producto",
-            "que venden",
-            "que tienen",
-            "catalogo",
-            "catalog",
-            "accesorios"
-        ]
-    ):
-        return (
-            "MUGI STORE ofrece accesorios y productos de "
-            "joyería. 💎 Puedes consultar el catálogo desde "
-            "la sección de Productos para conocer los artículos "
-            "disponibles, sus precios y su información."
-        )
-
-    # ======================================================
-    # COLLARES
-    # ======================================================
-
-    if contiene_alguna(
-        texto,
-        [
-            "collar",
-            "collares"
-        ]
-    ):
-        return (
-            "Sí, MUGI STORE puede ofrecer collares y otros "
-            "accesorios. 💎 Para conocer los modelos disponibles "
-            "y sus precios actuales, revisa la sección Productos."
-        )
-
-    # ======================================================
-    # PULSERAS
-    # ======================================================
-
-    if contiene_alguna(
-        texto,
-        [
-            "pulsera",
-            "pulseras"
-        ]
-    ):
-        return (
-            "Puedes consultar las pulseras disponibles en la "
-            "sección Productos de MUGI STORE. Allí encontrarás "
-            "la información correspondiente a cada producto."
-        )
-
-    # ======================================================
-    # ANILLOS
-    # ======================================================
-
-    if contiene_alguna(
-        texto,
-        [
-            "anillo",
-            "anillos"
-        ]
-    ):
-        return (
-            "Puedes consultar los anillos disponibles desde "
-            "la sección Productos. El catálogo muestra la "
-            "información disponible de cada artículo."
-        )
-
-    # ======================================================
-    # PRECIO
-    # ======================================================
-
-    if contiene_alguna(
-        texto,
-        [
-            "precio",
-            "precios",
-            "cuanto cuesta",
-            "cuanto vale",
-            "valor",
-            "valen"
-        ]
-    ):
-        return (
-            "Los precios dependen del producto que quieras "
-            "comprar. 💰 Puedes consultar el precio actualizado "
-            "directamente en la sección Productos de MUGI STORE."
-        )
-
-    # ======================================================
-    # STOCK
-    # ======================================================
-
-    if contiene_alguna(
-        texto,
-        [
-            "stock",
-            "disponible",
-            "disponibilidad",
-            "hay unidades",
-            "queda"
-        ]
-    ):
-        return (
-            "La disponibilidad depende de cada producto. "
-            "Te recomiendo revisar el catálogo para consultar "
-            "el stock disponible."
-        )
-
-    # ======================================================
-    # BUSCAR PRODUCTOS
-    # ======================================================
-
-    if contiene_alguna(
-        texto,
-        [
-            "buscar producto",
-            "busco un producto",
-            "estoy buscando",
-            "quiero buscar",
-            "como busco"
-        ]
-    ):
-        return (
-            "Puedes ingresar a la sección Productos y utilizar "
-            "las opciones de búsqueda o filtros para encontrar "
-            "el artículo que estás buscando."
+            "MUGI STORE es una tienda de accesorios y "
+            "joyería. La plataforma permite consultar "
+            "productos, agregarlos al carrito, realizar "
+            "compras, consultar facturación y gestionar PQR."
         )
 
     # ======================================================
@@ -564,18 +765,17 @@ def respuesta_faq(mensaje: str) -> str:
     if contiene_alguna(
         texto,
         [
-            "comprar",
-            "compra",
-            "quiero comprar",
             "como compro",
-            "como comprar"
+            "como comprar",
+            "quiero comprar",
+            "como hago una compra"
         ]
     ):
         return (
-            "Para comprar en MUGI STORE, primero selecciona "
-            "el producto que deseas, agrégalo al carrito y "
-            "continúa con el proceso de compra. Al finalizar "
-            "se genera la información correspondiente a la venta."
+            "Para comprar en MUGI STORE, selecciona un "
+            "producto, agrégalo al carrito y continúa con "
+            "el proceso de compra. Al finalizar, la venta "
+            "queda registrada en el sistema."
         )
 
     # ======================================================
@@ -592,14 +792,13 @@ def respuesta_faq(mensaje: str) -> str:
         ]
     ):
         return (
-            "El carrito de compras te permite guardar los "
-            "productos que deseas comprar. 🛒 Puedes agregar "
-            "productos, modificar cantidades y revisar el "
-            "total antes de confirmar la compra."
+            "El carrito te permite guardar los productos "
+            "que deseas comprar, modificar cantidades y "
+            "revisar el total antes de confirmar la compra. 🛒"
         )
 
     # ======================================================
-    # QUITAR PRODUCTOS DEL CARRITO
+    # QUITAR DEL CARRITO
     # ======================================================
 
     if contiene_alguna(
@@ -612,28 +811,9 @@ def respuesta_faq(mensaje: str) -> str:
         ]
     ):
         return (
-            "Puedes quitar un producto desde el carrito de "
-            "compras utilizando la opción de eliminar que "
-            "aparece junto al producto."
-        )
-
-    # ======================================================
-    # CANTIDADES
-    # ======================================================
-
-    if contiene_alguna(
-        texto,
-        [
-            "cantidad",
-            "cuantas unidades",
-            "mas unidades",
-            "menos unidades"
-        ]
-    ):
-        return (
-            "Desde el carrito puedes modificar la cantidad "
-            "de unidades de los productos antes de confirmar "
-            "la compra."
+            "Puedes quitar un producto desde el carrito "
+            "utilizando la opción de eliminar que aparece "
+            "junto al artículo."
         )
 
     # ======================================================
@@ -650,31 +830,10 @@ def respuesta_faq(mensaje: str) -> str:
         ]
     ):
         return (
-            "Después de realizar una compra, el sistema "
-            "registra la venta y genera la información de "
-            "facturación correspondiente. Si necesitas "
-            "consultar una factura específica, inicia sesión "
-            "en tu cuenta."
-        )
-
-    # ======================================================
-    # VENTAS
-    # ======================================================
-
-    if contiene_alguna(
-        texto,
-        [
-            "venta",
-            "ventas",
-            "pedido",
-            "pedidos"
-        ]
-    ):
-        return (
-            "Las compras realizadas quedan registradas como "
-            "ventas dentro del sistema. Los usuarios autorizados "
-            "pueden consultar la información correspondiente "
-            "desde los paneles de gestión."
+            "Después de una compra, el sistema registra "
+            "la venta y genera la información de facturación "
+            "correspondiente. Para consultar información "
+            "específica de una factura debes iniciar sesión."
         )
 
     # ======================================================
@@ -687,38 +846,18 @@ def respuesta_faq(mensaje: str) -> str:
             "estado de mi compra",
             "estado de mi venta",
             "como va mi compra",
-            "donde esta mi pedido"
+            "donde esta mi pedido",
+            "seguimiento de mi pedido"
         ]
     ):
         return (
-            "Para consultar información específica sobre una "
-            "compra debes ingresar a tu cuenta. Allí podrás "
-            "consultar la información disponible de tus ventas."
+            "Para consultar el estado de una compra específica, "
+            "inicia sesión y revisa la información disponible "
+            "en tu panel de cliente."
         )
 
     # ======================================================
     # PQR
-    # ======================================================
-
-    if contiene_alguna(
-        texto,
-        [
-            "pqr",
-            "peticion",
-            "queja",
-            "reclamo",
-            "solicitud"
-        ]
-    ):
-        return (
-            "MUGI STORE cuenta con un sistema de PQR para "
-            "registrar peticiones, quejas, reclamos y solicitudes. "
-            "Puedes ingresar a la sección PQR para crear una "
-            "solicitud y consultar su estado."
-        )
-
-    # ======================================================
-    # CREAR PQR
     # ======================================================
 
     if contiene_alguna(
@@ -732,14 +871,27 @@ def respuesta_faq(mensaje: str) -> str:
         ]
     ):
         return (
-            "Para registrar una PQR, ingresa a la sección "
-            "correspondiente y completa el tipo, asunto y "
-            "descripción de tu solicitud. El sistema registrará "
-            "la PQR para su posterior atención."
+            "Para crear una PQR, inicia sesión, entra a la "
+            "sección PQR y completa el tipo, asunto y "
+            "descripción de tu solicitud."
+        )
+
+    if texto == "pqr" or contiene_alguna(
+        texto,
+        [
+            "que es una pqr",
+            "para que sirve una pqr",
+            "como funciona una pqr"
+        ]
+    ):
+        return (
+            "Una PQR permite registrar peticiones, quejas, "
+            "reclamos o solicitudes para que sean atendidas "
+            "por el equipo de MUGI STORE."
         )
 
     # ======================================================
-    # RESPUESTA PQR
+    # PQR ESPECÍFICA
     # ======================================================
 
     if contiene_alguna(
@@ -747,32 +899,31 @@ def respuesta_faq(mensaje: str) -> str:
         [
             "respuesta de mi pqr",
             "respondieron mi pqr",
-            "respuesta pqr",
-            "estado pqr"
+            "estado de mi pqr"
         ]
     ):
         return (
-            "Para consultar la respuesta o el estado de una "
-            "PQR específica debes ingresar a tu cuenta y "
-            "consultar tus solicitudes registradas."
+            "Para consultar el estado o respuesta de una PQR "
+            "específica debes iniciar sesión y revisar tus "
+            "solicitudes registradas."
         )
 
     # ======================================================
-    # CUENTA
+    # PRODUCTO DAÑADO
     # ======================================================
 
     if contiene_alguna(
         texto,
         [
-            "cuenta",
-            "mi cuenta",
-            "perfil"
+            "producto danado",
+            "llego danado",
+            "producto defectuoso"
         ]
     ):
         return (
-            "Desde tu cuenta puedes consultar y gestionar "
-            "la información disponible de tu perfil. Para "
-            "información privada debes iniciar sesión."
+            "Si recibiste un producto dañado o defectuoso, "
+            "puedes registrar una PQR describiendo lo ocurrido "
+            "para que el equipo revise tu caso."
         )
 
     # ======================================================
@@ -783,16 +934,14 @@ def respuesta_faq(mensaje: str) -> str:
         texto,
         [
             "registrarme",
-            "registro",
             "crear cuenta",
             "crear una cuenta",
             "como me registro"
         ]
     ):
         return (
-            "Si todavía no tienes una cuenta, puedes utilizar "
-            "la opción de registro disponible en MUGI STORE "
-            "y completar los datos solicitados."
+            "Puedes utilizar la opción de registro disponible "
+            "en MUGI STORE y completar los datos solicitados."
         )
 
     # ======================================================
@@ -803,15 +952,13 @@ def respuesta_faq(mensaje: str) -> str:
         texto,
         [
             "iniciar sesion",
-            "iniciar sesión",
             "login",
-            "entrar a mi cuenta",
-            "ingresar"
+            "entrar a mi cuenta"
         ]
     ):
         return (
-            "Para acceder a las funciones privadas de MUGI "
-            "STORE debes iniciar sesión utilizando tus "
+            "Para acceder a las funciones privadas de "
+            "MUGI STORE debes iniciar sesión con tus "
             "credenciales registradas."
         )
 
@@ -825,14 +972,13 @@ def respuesta_faq(mensaje: str) -> str:
             "olvide mi contrasena",
             "olvide la contrasena",
             "cambiar contrasena",
-            "cambiar contraseña",
-            "contrasena"
+            "recuperar contrasena"
         ]
     ):
         return (
-            "Si tienes problemas con tu contraseña, utiliza "
-            "las opciones disponibles en el sistema para "
-            "gestionar el acceso a tu cuenta."
+            "Si olvidaste tu contraseña, utiliza la opción "
+            "de recuperación de contraseña disponible en "
+            "la pantalla de inicio de sesión."
         )
 
     # ======================================================
@@ -842,18 +988,17 @@ def respuesta_faq(mensaje: str) -> str:
     if contiene_alguna(
         texto,
         [
-            "pago",
-            "pagos",
-            "como pago",
             "formas de pago",
-            "metodo de pago"
+            "metodo de pago",
+            "como pago",
+            "medios de pago"
         ]
     ):
         return (
-            "Las opciones de pago disponibles dependen de "
-            "la configuración actual de MUGI STORE. Consulta "
-            "el proceso de compra para conocer las opciones "
-            "disponibles."
+            "Las opciones de pago dependen de la configuración "
+            "actual del proceso de compra de MUGI STORE. "
+            "Puedes consultar las opciones disponibles al "
+            "realizar la compra."
         )
 
     # ======================================================
@@ -864,7 +1009,6 @@ def respuesta_faq(mensaje: str) -> str:
         texto,
         [
             "envio",
-            "envíos",
             "envio a domicilio",
             "domicilio",
             "entrega"
@@ -885,7 +1029,6 @@ def respuesta_faq(mensaje: str) -> str:
         texto,
         [
             "devolucion",
-            "devolución",
             "devolver",
             "cambio de producto",
             "cambiar producto"
@@ -895,26 +1038,6 @@ def respuesta_faq(mensaje: str) -> str:
             "Si necesitas solicitar un cambio o devolución, "
             "puedes registrar una PQR explicando tu situación "
             "para que el equipo correspondiente pueda revisarla."
-        )
-
-    # ======================================================
-    # PRODUCTO DAÑADO
-    # ======================================================
-
-    if contiene_alguna(
-        texto,
-        [
-            "producto danado",
-            "producto dañado",
-            "llego danado",
-            "llego dañado",
-            "producto defectuoso"
-        ]
-    ):
-        return (
-            "Si recibiste un producto con algún inconveniente, "
-            "puedes registrar una PQR describiendo lo sucedido "
-            "para solicitar atención sobre tu caso."
         )
 
     # ======================================================
@@ -933,8 +1056,7 @@ def respuesta_faq(mensaje: str) -> str:
     ):
         return (
             "Puedes utilizar la sección Contacto de MUGI STORE "
-            "para consultar los canales de comunicación "
-            "disponibles."
+            "para consultar los canales de comunicación disponibles."
         )
 
     # ======================================================
@@ -963,17 +1085,17 @@ def respuesta_faq(mensaje: str) -> str:
     if contiene_alguna(
         texto,
         [
-            "rol",
-            "roles",
-            "administrador",
-            "empleado",
-            "cliente"
+            "roles del sistema",
+            "que roles tienen",
+            "tipos de usuario",
+            "administrador empleado cliente"
         ]
     ):
         return (
-            "MUGI STORE utiliza diferentes roles dentro del "
-            "sistema, como Administrador, Empleado y Cliente. "
-            "Cada rol tiene permisos y funciones diferentes."
+            "MUGI STORE utiliza tres roles principales: "
+            "Administrador, Empleado y Cliente. Cada uno "
+            "tiene permisos y funciones diferentes dentro "
+            "de la plataforma."
         )
 
     # ======================================================
@@ -985,70 +1107,17 @@ def respuesta_faq(mensaje: str) -> str:
         [
             "seguridad",
             "datos seguros",
-            "mis datos",
             "privacidad"
         ]
     ):
         return (
             "MUGI STORE utiliza autenticación y control de "
-            "acceso para proteger las funciones privadas del "
-            "sistema. La información específica de una cuenta "
-            "solo debe consultarse después de iniciar sesión."
+            "acceso para proteger las funciones privadas "
+            "del sistema. La información privada de una "
+            "cuenta requiere autenticación."
         )
 
-    # ======================================================
-    # RECOMENDACIONES
-    # ======================================================
-
-    if contiene_alguna(
-        texto,
-        [
-            "recomiendame",
-            "recomiendame algo",
-            "que me recomiendas",
-            "que producto me recomiendas",
-            "cual me recomiendas"
-        ]
-    ):
-        return (
-            "¡Claro! ✨ Puedo orientarte sobre los productos "
-            "de MUGI STORE. Para elegir uno, puedes revisar "
-            "el catálogo y comparar los productos disponibles, "
-            "sus características y precios."
-        )
-
-    # ======================================================
-    # AGRADECIMIENTO + DESPEDIDA
-    # ======================================================
-
-    if (
-        "gracias" in texto
-        and contiene_alguna(
-            texto,
-            [
-                "adios",
-                "chao",
-                "hasta luego"
-            ]
-        )
-    ):
-        return (
-            "¡Gracias a ti! 💎 Fue un gusto ayudarte. "
-            "¡Hasta luego!"
-        )
-
-    # ======================================================
-    # RESPUESTA GENERAL
-    # ======================================================
-
-    return (
-        "Puedo ayudarte con información sobre MUGI STORE, "
-        "productos, precios, disponibilidad, compras, carrito, "
-        "ventas, facturas, cuenta, PQR y el funcionamiento "
-        "general de la plataforma. 😊\n\n"
-        "Si tienes una pregunta más específica, escríbela "
-        "y trataré de orientarte."
-    )
+    return None
 
 
 # ==========================================================
@@ -1060,60 +1129,109 @@ Eres MUGI IA, el asistente virtual de MUGI STORE.
 
 MUGI STORE es una tienda de accesorios y joyería.
 
-Tu función es brindar atención inicial a los clientes.
+Tu función es brindar atención inicial y ayudar al usuario
+a comprender y utilizar la plataforma.
 
-Puedes ayudar con:
+PUEDES AYUDAR CON:
 
 - Información general de MUGI STORE.
-- Productos y accesorios.
-- Orientación sobre compras.
-- Carrito de compras.
-- Ventas.
+- Productos.
+- Compras.
+- Carrito.
 - Facturas.
+- Ventas.
 - PQR.
-- Preguntas frecuentes.
-- Registro e inicio de sesión.
+- Registro.
+- Inicio de sesión.
+- Recuperación de contraseña.
 - Funcionamiento general de la plataforma.
 
 REGLAS IMPORTANTES:
 
 1. Responde siempre en español.
 
-2. Sé amable, claro y breve.
+2. Sé claro, natural y breve.
 
-3. No inventes productos que no conozcas.
+3. Analiza primero qué está preguntando realmente el usuario.
 
-4. No inventes precios.
+4. RESPONDE DIRECTAMENTE A LA PREGUNTA.
+No cambies el tema hacia productos si la pregunta no habla
+de productos.
 
-5. No inventes stock.
+5. No inventes productos.
 
-6. No inventes datos personales.
+6. No inventes precios.
 
-7. No inventes información privada de los usuarios.
+7. No inventes stock.
 
-8. Si preguntan por una venta, factura o PQR específica,
-indica que deben ingresar a su cuenta.
+8. No inventes datos personales.
 
-9. Si no conoces un dato específico de MUGI STORE,
-indica que deben revisar la sección correspondiente
-de la plataforma.
+9. No inventes información privada de usuarios.
 
-10. Puedes explicar cómo funciona el sistema.
+10. Si la pregunta necesita información real del catálogo,
+utiliza únicamente los datos que se proporcionen en el
+mensaje.
 
-11. Puedes explicar el proceso general de compra.
+11. Si no tienes un dato específico, dilo claramente.
 
-12. Puedes orientar al usuario para crear una PQR.
+12. Si una pregunta está fuera de las funciones de MUGI STORE,
+indica amablemente que tu función está enfocada en ayudar
+con la plataforma MUGI STORE.
 
-13. No solicites contraseñas ni claves privadas.
+13. Si preguntan por una venta, factura o PQR específica,
+indica que deben iniciar sesión para consultar información
+privada.
 
-14. No reveles información confidencial.
+14. Nunca solicites contraseñas ni claves privadas.
 
-15. Utiliza respuestas fáciles de entender.
+15. No afirmes que realizaste una acción si realmente no
+la realizaste.
 
-16. Puedes utilizar emojis de manera moderada.
+16. No digas que consultaste la base de datos si no se te
+proporcionaron datos de ella.
 
-17. Tu objetivo es brindar atención inicial y orientar
-al usuario dentro de MUGI STORE.
+17. No respondas con frases genéricas como
+"hay muchos productos" cuando la pregunta no sea sobre
+productos.
+
+18. Si la pregunta es "¿puedes ayudarme con X?", responde
+sobre X si está relacionado con MUGI STORE.
+
+19. Puedes utilizar emojis moderadamente.
+
+20. Si no puedes responder una pregunta concreta, explica
+brevemente qué información sí puedes proporcionar.
+
+EJEMPLOS:
+
+Usuario:
+"¿Por qué se llama MUGI?"
+
+Debes responder sobre el significado de MUGI.
+
+Usuario:
+"¿Cómo recupero mi contraseña?"
+
+Debes explicar el proceso general de recuperación.
+
+Usuario:
+"¿Qué es JWT?"
+
+Puedes explicar qué es JWT de forma sencilla, pero aclara
+que es una explicación técnica general si no forma parte
+de una función visible para el usuario.
+
+Usuario:
+"¿Qué opinas de MUGI?"
+
+Puedes dar una descripción neutral de la plataforma,
+sin inventar características.
+
+Usuario:
+"¿Hay un producto llamado X?"
+
+No inventes. Si no tienes datos del catálogo proporcionados,
+indica que no puedes confirmar su existencia.
 """
 
 
@@ -1129,31 +1247,59 @@ def conversar(datos: ChatbotRequest):
 
     mensaje = datos.mensaje.strip()
 
-    # ------------------------------------------------------
-    # RESPUESTA LOCAL INICIAL
-    # ------------------------------------------------------
-
-    respuesta_local = respuesta_faq(mensaje)
-
-    respuesta_general = (
-        "Puedo ayudarte con información sobre MUGI STORE, "
-        "productos, precios, disponibilidad, compras, carrito, "
-        "ventas, facturas, cuenta, PQR y el funcionamiento "
-        "general de la plataforma. 😊\n\n"
-        "Si tienes una pregunta más específica, escríbela "
-        "y trataré de orientarte."
-    )
-
-    # Las preguntas reconocidas tienen respuestas locales más precisas
-    # que una respuesta generada sin datos reales del catálogo o la cuenta.
-    if respuesta_local != respuesta_general:
+    if not mensaje:
         return {
-            "respuesta": respuesta_local
+            "respuesta": "Escribe una pregunta para poder ayudarte."
         }
 
-    # ------------------------------------------------------
-    # INTENTAR OPENAI
-    # ------------------------------------------------------
+    db = SessionLocal()
+
+    try:
+
+        # ==================================================
+        # 1. PRODUCTOS REALES DE LA BASE DE DATOS
+        # ==================================================
+
+        respuesta_producto = respuesta_productos(
+            mensaje,
+            db
+        )
+
+        if respuesta_producto:
+            return {
+                "respuesta": respuesta_producto
+            }
+
+        # ==================================================
+        # 2. FAQ LOCAL
+        # ==================================================
+
+        respuesta_local = respuesta_faq(
+            mensaje
+        )
+
+        if respuesta_local:
+            return {
+                "respuesta": respuesta_local
+            }
+
+    except Exception as error:
+
+        print(
+            "⚠️ ERROR CONSULTANDO PRODUCTOS:"
+        )
+
+        print(error)
+
+        respuesta_local = None
+
+    finally:
+
+        db.close()
+
+    # ======================================================
+    # 3. OPENAI PARA PREGUNTAS MÁS ABIERTAS
+    # ======================================================
 
     if client:
 
@@ -1163,11 +1309,11 @@ def conversar(datos: ChatbotRequest):
                 model="gpt-5",
                 instructions=INSTRUCCIONES_MUGI,
                 input=(
-                    f"Pregunta del usuario: {mensaje}\n\n"
-                    f"Orientación disponible: {respuesta_local}\n\n"
-                    "Responde de forma concreta y relacionada con la pregunta. "
-                    "Si la orientación no contiene el dato solicitado, dilo "
-                    "claramente y dirige al usuario a la sección adecuada."
+                    f"Pregunta del usuario:\n{mensaje}\n\n"
+                    "Responde directamente a la pregunta. "
+                    "No cambies el tema. "
+                    "Si no tienes información suficiente, "
+                    "dilo claramente."
                 )
             )
 
@@ -1187,14 +1333,15 @@ def conversar(datos: ChatbotRequest):
 
             print(error)
 
-            print(
-                "➡️ Se utilizará la respuesta FAQ local."
-            )
-
-    # ------------------------------------------------------
-    # FALLBACK
-    # ------------------------------------------------------
+    # ======================================================
+    # 4. FALLBACK FINAL
+    # ======================================================
 
     return {
-        "respuesta": respuesta_local
+        "respuesta": (
+            "No tengo suficiente información para responder "
+            "esa pregunta con precisión. Puedo ayudarte con "
+            "productos, compras, carrito, facturas, PQR y "
+            "el funcionamiento de MUGI STORE."
+        )
     }

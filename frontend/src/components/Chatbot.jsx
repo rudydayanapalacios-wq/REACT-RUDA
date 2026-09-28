@@ -1,11 +1,21 @@
 import { useEffect, useRef, useState } from "react";
-import { X, Send, Bot, User, Loader2, Sparkles, Trash2 } from "lucide-react";
+import {
+  X,
+  Send,
+  Bot,
+  User,
+  Loader2,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 
 const API_URL = import.meta.env.VITE_API_URL;
+
 const SUGERENCIAS = [
   "¿Qué productos tienen?",
-  "¿Cómo compro?",
-  "¿Cómo consulto mi factura?",
+  "¿Cuánto cuesta el Collar Dorado Premium?",
+  "¿Hay Anillito disponible?",
+  "¿Cómo recupero mi contraseña?",
 ];
 
 function Chatbot() {
@@ -16,7 +26,7 @@ function Chatbot() {
       id: 1,
       tipo: "bot",
       texto:
-        "¡Hola! 👋 Soy MUGI IA. Puedo ayudarte con productos, compras, carrito, facturas, PQR y preguntas frecuentes de MUGI STORE.",
+        "¡Hola! 👋 Soy MUGI IA. Puedo ayudarte con productos, precios, disponibilidad, compras, carrito, facturas, PQR y preguntas frecuentes de MUGI STORE.",
     },
   ]);
 
@@ -26,12 +36,20 @@ function Chatbot() {
   const mensajesRef = useRef(null);
   const inputRef = useRef(null);
 
+  // ==========================================================
+  // BAJAR AUTOMÁTICAMENTE AL ÚLTIMO MENSAJE
+  // ==========================================================
+
   useEffect(() => {
     if (mensajesRef.current) {
       mensajesRef.current.scrollTop =
         mensajesRef.current.scrollHeight;
     }
   }, [mensajes, cargando]);
+
+  // ==========================================================
+  // ENFOCAR INPUT AL ABRIR
+  // ==========================================================
 
   useEffect(() => {
     if (abierto && inputRef.current) {
@@ -41,6 +59,10 @@ function Chatbot() {
     }
   }, [abierto]);
 
+  // ==========================================================
+  // ENVIAR MENSAJE
+  // ==========================================================
+
   const enviarTexto = async (textoSinFormato) => {
     const texto = textoSinFormato.trim();
 
@@ -48,63 +70,100 @@ function Chatbot() {
       return;
     }
 
+    // Mostrar inmediatamente el mensaje del usuario
     setMensajes((anteriores) => [
       ...anteriores,
       {
         id: Date.now(),
         tipo: "usuario",
-        texto: texto,
+        texto,
       },
     ]);
 
     setMensaje("");
     setCargando(true);
+
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
+
+    const timeout = setTimeout(() => {
+      controller.abort();
+    }, 20000);
 
     try {
+      // ======================================================
+      // CONEXIÓN CON FASTAPI
+      // ======================================================
+
       const response = await fetch(`${API_URL}/chatbot/`, {
         method: "POST",
+
         headers: {
           "Content-Type": "application/json",
         },
+
         body: JSON.stringify({
           mensaje: texto,
         }),
+
         signal: controller.signal,
       });
 
-      const datos = await response.json();
+      let datos = null;
+
+      try {
+        datos = await response.json();
+      } catch {
+        datos = null;
+      }
 
       if (!response.ok) {
         throw new Error(
           datos?.detail ||
-          "No fue posible obtener una respuesta."
+            datos?.respuesta ||
+            "No fue posible obtener una respuesta del asistente."
         );
       }
+
+      const respuestaBot =
+        datos?.respuesta?.trim() ||
+        "No recibí una respuesta del asistente.";
+
+      // ======================================================
+      // MOSTRAR RESPUESTA DEL BACKEND
+      // ======================================================
 
       setMensajes((anteriores) => [
         ...anteriores,
         {
           id: Date.now() + 1,
           tipo: "bot",
-          texto:
-            datos?.respuesta ||
-            "No recibí una respuesta del asistente.",
+          texto: respuestaBot,
         },
       ]);
     } catch (error) {
       console.error("ERROR CHATBOT:", error);
+
+      let mensajeError =
+        "Lo siento 😕, tuve un problema al procesar tu mensaje.";
+
+      if (error.name === "AbortError") {
+        mensajeError =
+          "La respuesta tardó demasiado. Revisa tu conexión e inténtalo nuevamente.";
+      } else if (
+        error.message?.includes("Failed to fetch")
+      ) {
+        mensajeError =
+          "No pude conectarme con el servidor de MUGI. Verifica que el backend esté funcionando.";
+      } else if (error.message) {
+        mensajeError = error.message;
+      }
 
       setMensajes((anteriores) => [
         ...anteriores,
         {
           id: Date.now() + 2,
           tipo: "bot",
-          texto:
-            error.name === "AbortError"
-              ? "La respuesta tardó demasiado. Revisa tu conexión e inténtalo de nuevo."
-              : "Lo siento 😕, tuve un problema al procesar tu mensaje. Intenta nuevamente.",
+          texto: mensajeError,
         },
       ]);
     } finally {
@@ -113,10 +172,30 @@ function Chatbot() {
     }
   };
 
+  // ==========================================================
+  // FORMULARIO
+  // ==========================================================
+
   const enviarMensaje = (e) => {
     e.preventDefault();
     enviarTexto(mensaje);
   };
+
+  // ==========================================================
+  // SUGERENCIA
+  // ==========================================================
+
+  const usarSugerencia = (texto) => {
+    if (cargando) {
+      return;
+    }
+
+    enviarTexto(texto);
+  };
+
+  // ==========================================================
+  // REINICIAR CHAT
+  // ==========================================================
 
   const reiniciarChat = () => {
     if (cargando) {
@@ -128,11 +207,20 @@ function Chatbot() {
         id: Date.now(),
         tipo: "bot",
         texto:
-          "¡Hola! 👋 Soy MUGI IA. Puedo ayudarte con productos, compras, carrito, facturas, PQR y preguntas frecuentes de MUGI STORE.",
+          "¡Hola! 👋 Soy MUGI IA. Puedo ayudarte con productos, precios, disponibilidad, compras, carrito, facturas, PQR y preguntas frecuentes de MUGI STORE.",
       },
     ]);
+
     setMensaje("");
+
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
   };
+
+  // ==========================================================
+  // TECLA ENTER
+  // ==========================================================
 
   const manejarTecla = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -143,323 +231,414 @@ function Chatbot() {
 
   return (
     <>
+      {/* ======================================================
+          BOTÓN FLOTANTE
+      ====================================================== */}
+
       {!abierto && (
         <button
           type="button"
           onClick={() => setAbierto(true)}
-          className="
-            fixed
-            bottom-24
-            right-6
-            z-[9998]
-            flex
-            h-16
-            w-16
-            items-center
-            justify-center
-            rounded-full
-            bg-[#6E1F2B]
-            text-[#F8F3EA]
-            shadow-2xl
-            transition
-            duration-300
-            hover:scale-110
-            hover:bg-[#8B2938]
-          "
-          title="Abrir MUGI IA"
-          aria-label="Abrir MUGI IA"
+          aria-label="Abrir asistente MUGI IA"
+          style={{
+            position: "fixed",
+            right: "24px",
+            bottom: "24px",
+            width: "64px",
+            height: "64px",
+            borderRadius: "50%",
+            border: "2px solid #D4AF37",
+            background: "#7F0303",
+            color: "#F8F3EA",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            zIndex: 9999,
+            boxShadow: "0 8px 25px rgba(0,0,0,0.25)",
+          }}
         >
           <img
             src="/img/TELEFONOREAL.png"
-            alt="Chatbot MUGI"
-            className="h-10 w-10 object-contain"
+            alt="MUGI IA"
+            style={{
+              width: "38px",
+              height: "38px",
+              objectFit: "contain",
+            }}
           />
-
-          <span
-            className="
-              absolute
-              -right-1
-              -top-1
-              flex
-              h-6
-              w-6
-              items-center
-              justify-center
-              rounded-full
-              bg-[#C99A45]
-              text-[#241415]
-            "
-          >
-            <Sparkles size={13} />
-          </span>
         </button>
       )}
 
+      {/* ======================================================
+          VENTANA DEL CHAT
+      ====================================================== */}
+
       {abierto && (
         <div
-          className="
-            fixed
-            bottom-6
-            right-6
-            z-[9999]
-            flex
-            h-[600px]
-            max-h-[calc(100dvh-3rem)]
-            w-[380px]
-            max-w-[calc(100vw-2rem)]
-            flex-col
-            overflow-hidden
-            rounded-[28px]
-            border
-            border-[#C99A45]/30
-            bg-[#F8F3EA]
-            shadow-2xl
-          "
+          style={{
+            position: "fixed",
+            right: "24px",
+            bottom: "24px",
+            width: "min(390px, calc(100vw - 32px))",
+            height: "min(620px, calc(100vh - 48px))",
+            background: "#F8F3EA",
+            border: "1px solid #D4AF37",
+            borderRadius: "20px",
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            zIndex: 9999,
+            boxShadow: "0 15px 45px rgba(0,0,0,0.3)",
+          }}
         >
+          {/* ==================================================
+              HEADER
+          ================================================== */}
+
           <div
-            className="
-              flex
-              items-center
-              justify-between
-              bg-[#241415]
-              px-5
-              py-4
-              text-[#F8F3EA]
-            "
+            style={{
+              background: "#7F0303",
+              color: "#F8F3EA",
+              padding: "16px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              borderBottom: "2px solid #D4AF37",
+            }}
           >
-            <div className="flex items-center gap-3">
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+              }}
+            >
               <div
-                className="
-                  flex
-                  h-11
-                  w-11
-                  items-center
-                  justify-center
-                  rounded-full
-                  bg-[#6E1F2B]
-                "
+                style={{
+                  width: "42px",
+                  height: "42px",
+                  borderRadius: "50%",
+                  background: "#F8F3EA",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  overflow: "hidden",
+                }}
               >
-                <Bot size={23} />
+                <img
+                  src="/img/TELEFONOREAL.png"
+                  alt="MUGI IA"
+                  style={{
+                    width: "30px",
+                    height: "30px",
+                    objectFit: "contain",
+                  }}
+                />
               </div>
 
               <div>
-                <h2 className="font-semibold">
+                <div
+                  style={{
+                    fontWeight: "700",
+                    fontSize: "16px",
+                  }}
+                >
                   MUGI IA
-                </h2>
+                </div>
 
-                <div className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-green-400" />
-
-                  <span className="text-xs text-[#D8CFC4]">
-                    Asistente virtual
-                  </span>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    opacity: 0.85,
+                  }}
+                >
+                  Asistente virtual
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-1">
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
               <button
                 type="button"
                 onClick={reiniciarChat}
                 disabled={cargando}
-                className="
-                  rounded-full
-                  p-2
-                  transition
-                  hover:bg-white/10
-                  disabled:cursor-not-allowed
-                  disabled:opacity-40
-                "
-                title="Nueva conversación"
-                aria-label="Nueva conversación"
+                title="Reiniciar conversación"
+                aria-label="Reiniciar conversación"
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  border: "none",
+                  background: "transparent",
+                  color: "#F8F3EA",
+                  cursor: cargando
+                    ? "not-allowed"
+                    : "pointer",
+                  opacity: cargando ? 0.5 : 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
-                <Trash2 size={19} />
+                <Trash2 size={18} />
               </button>
 
               <button
                 type="button"
                 onClick={() => setAbierto(false)}
-                className="
-                  rounded-full
-                  p-2
-                  transition
-                  hover:bg-white/10
-                "
                 title="Cerrar chatbot"
                 aria-label="Cerrar chatbot"
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  border: "none",
+                  background: "transparent",
+                  color: "#F8F3EA",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
-                <X size={22} />
+                <X size={21} />
               </button>
             </div>
           </div>
 
+          {/* ==================================================
+              MENSAJES
+          ================================================== */}
+
           <div
             ref={mensajesRef}
-            aria-live="polite"
-            className="
-              flex-1
-              space-y-4
-              overflow-y-auto
-              bg-[#EFE8DF]
-              p-4
-            "
+            style={{
+              flex: 1,
+              overflowY: "auto",
+              padding: "16px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "12px",
+            }}
           >
-            {mensajes.length === 1 && !cargando && (
-              <div className="mb-1 flex flex-wrap gap-2">
+            {mensajes.map((item) => {
+              const esUsuario =
+                item.tipo === "usuario";
+
+              return (
+                <div
+                  key={item.id}
+                  style={{
+                    display: "flex",
+                    justifyContent: esUsuario
+                      ? "flex-end"
+                      : "flex-start",
+                    gap: "8px",
+                    alignItems: "flex-start",
+                  }}
+                >
+                  {!esUsuario && (
+                    <div
+                      style={{
+                        width: "30px",
+                        height: "30px",
+                        minWidth: "30px",
+                        borderRadius: "50%",
+                        background: "#7F0303",
+                        color: "#F8F3EA",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Bot size={16} />
+                    </div>
+                  )}
+
+                  <div
+                    style={{
+                      maxWidth: "78%",
+                      padding: "11px 13px",
+                      borderRadius: esUsuario
+                        ? "16px 16px 4px 16px"
+                        : "16px 16px 16px 4px",
+                      background: esUsuario
+                        ? "#7F0303"
+                        : "#EFE8DF",
+                      color: esUsuario
+                        ? "#F8F3EA"
+                        : "#4A0505",
+                      fontSize: "14px",
+                      lineHeight: "1.5",
+                      whiteSpace: "pre-wrap",
+                      overflowWrap: "anywhere",
+                    }}
+                  >
+                    {item.texto}
+                  </div>
+
+                  {esUsuario && (
+                    <div
+                      style={{
+                        width: "30px",
+                        height: "30px",
+                        minWidth: "30px",
+                        borderRadius: "50%",
+                        background: "#D4AF37",
+                        color: "#4A0505",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <User size={16} />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* ==================================================
+                CARGANDO
+            ================================================== */}
+
+            {cargando && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "8px",
+                }}
+              >
+                <div
+                  style={{
+                    width: "30px",
+                    height: "30px",
+                    minWidth: "30px",
+                    borderRadius: "50%",
+                    background: "#7F0303",
+                    color: "#F8F3EA",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Bot size={16} />
+                </div>
+
+                <div
+                  style={{
+                    padding: "11px 13px",
+                    borderRadius: "16px 16px 16px 4px",
+                    background: "#EFE8DF",
+                    color: "#4A0505",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    fontSize: "14px",
+                  }}
+                >
+                  <Loader2
+                    size={16}
+                    style={{
+                      animation: "mugiSpin 1s linear infinite",
+                    }}
+                  />
+
+                  <span>
+                    MUGI IA está pensando...
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ==================================================
+              SUGERENCIAS
+          ================================================== */}
+
+          {!cargando && mensajes.length <= 1 && (
+            <div
+              style={{
+                padding: "0 14px 12px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  color: "#7F0303",
+                  fontSize: "12px",
+                  fontWeight: "700",
+                  marginBottom: "8px",
+                }}
+              >
+                <Sparkles size={14} />
+                Preguntas rápidas
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "6px",
+                }}
+              >
                 {SUGERENCIAS.map((sugerencia) => (
                   <button
                     key={sugerencia}
                     type="button"
-                    onClick={() => enviarTexto(sugerencia)}
-                    className="
-                      rounded-full
-                      border
-                      border-[#C99A45]/50
-                      bg-white
-                      px-3
-                      py-2
-                      text-left
-                      text-xs
-                      font-medium
-                      text-[#6E1F2B]
-                      transition
-                      hover:border-[#6E1F2B]
-                      hover:bg-[#FFF8ED]
-                    "
+                    onClick={() =>
+                      usarSugerencia(sugerencia)
+                    }
+                    style={{
+                      border: "1px solid #D8BA98",
+                      background: "#F8F3EA",
+                      color: "#4A0505",
+                      borderRadius: "20px",
+                      padding: "7px 10px",
+                      fontSize: "12px",
+                      cursor: "pointer",
+                    }}
                   >
                     {sugerencia}
                   </button>
                 ))}
               </div>
-            )}
+            </div>
+          )}
 
-            {mensajes.map((item) => (
-              <div
-                key={item.id}
-                className={`flex ${item.tipo === "usuario"
-                  ? "justify-end"
-                  : "justify-start"
-                  }`}
-              >
-                <div
-                  className={`flex max-w-[85%] items-end gap-2 ${item.tipo === "usuario"
-                    ? "flex-row-reverse"
-                    : "flex-row"
-                    }`}
-                >
-                  <div
-                    className={`
-                      flex
-                      h-8
-                      w-8
-                      shrink-0
-                      items-center
-                      justify-center
-                      rounded-full
-                      ${item.tipo === "usuario"
-                        ? "bg-[#C99A45] text-[#241415]"
-                        : "bg-[#6E1F2B] text-[#F8F3EA]"
-                      }
-                    `}
-                  >
-                    {item.tipo === "usuario" ? (
-                      <User size={16} />
-                    ) : (
-                      <Bot size={16} />
-                    )}
-                  </div>
-
-                  <div
-                    className={`
-                      whitespace-pre-line
-                      rounded-2xl
-                      px-4
-                      py-3
-                      text-sm
-                      leading-relaxed
-                      shadow-sm
-                      ${item.tipo === "usuario"
-                        ? "rounded-br-md bg-[#6E1F2B] text-white"
-                        : "rounded-bl-md bg-white text-[#241415]"
-                      }
-                    `}
-                  >
-                    {item.texto}
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {cargando && (
-              <div className="flex justify-start">
-                <div className="flex items-end gap-2">
-                  <div
-                    className="
-                      flex
-                      h-8
-                      w-8
-                      items-center
-                      justify-center
-                      rounded-full
-                      bg-[#6E1F2B]
-                      text-white
-                    "
-                  >
-                    <Bot size={16} />
-                  </div>
-
-                  <div
-                    className="
-                      flex
-                      items-center
-                      gap-2
-                      rounded-2xl
-                      rounded-bl-md
-                      bg-white
-                      px-4
-                      py-3
-                      text-sm
-                      text-[#6E1F2B]
-                      shadow-sm
-                    "
-                  >
-                    <Loader2
-                      size={16}
-                      className="animate-spin"
-                    />
-
-                    <span>Escribiendo...</span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          {/* ==================================================
+              INPUT
+          ================================================== */}
 
           <form
             onSubmit={enviarMensaje}
-            className="
-              border-t
-              border-[#D8CFC4]
-              bg-[#F8F3EA]
-              p-3
-            "
+            style={{
+              padding: "12px",
+              borderTop: "1px solid #D8BA98",
+              background: "#F8F3EA",
+            }}
           >
             <div
-              className="
-                flex
-                items-center
-                gap-2
-                rounded-2xl
-                border
-                border-[#D8CFC4]
-                bg-white
-                p-2
-                focus-within:border-[#C99A45]
-              "
+              style={{
+                display: "flex",
+                alignItems: "flex-end",
+                gap: "8px",
+                background: "#EFE8DF",
+                border: "1px solid #D8BA98",
+                borderRadius: "15px",
+                padding: "7px",
+              }}
             >
-              <input
+              <textarea
                 ref={inputRef}
-                type="text"
                 value={mensaje}
                 onChange={(e) =>
                   setMensaje(e.target.value)
@@ -467,45 +646,54 @@ function Chatbot() {
                 onKeyDown={manejarTecla}
                 placeholder="Escribe tu pregunta..."
                 maxLength={500}
+                rows={1}
                 disabled={cargando}
-                className="
-                  min-w-0
-                  flex-1
-                  bg-transparent
-                  px-2
-                  py-2
-                  text-sm
-                  text-[#241415]
-                  outline-none
-                  placeholder:text-[#8C8177]
-                "
+                style={{
+                  flex: 1,
+                  resize: "none",
+                  border: "none",
+                  outline: "none",
+                  background: "transparent",
+                  color: "#4A0505",
+                  fontSize: "14px",
+                  lineHeight: "1.4",
+                  padding: "8px",
+                  maxHeight: "100px",
+                }}
               />
 
               <button
                 type="submit"
                 disabled={!mensaje.trim() || cargando}
-                className="
-                  flex
-                  h-10
-                  w-10
-                  shrink-0
-                  items-center
-                  justify-center
-                  rounded-xl
-                  bg-[#6E1F2B]
-                  text-white
-                  transition
-                  hover:bg-[#8B2938]
-                  disabled:cursor-not-allowed
-                  disabled:opacity-40
-                "
-                title="Enviar mensaje"
                 aria-label="Enviar mensaje"
+                title="Enviar mensaje"
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  minWidth: "40px",
+                  borderRadius: "50%",
+                  border: "none",
+                  background:
+                    !mensaje.trim() || cargando
+                      ? "#D8BA98"
+                      : "#7F0303",
+                  color: "#F8F3EA",
+                  cursor:
+                    !mensaje.trim() || cargando
+                      ? "not-allowed"
+                      : "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
                 {cargando ? (
                   <Loader2
                     size={18}
-                    className="animate-spin"
+                    style={{
+                      animation:
+                        "mugiSpin 1s linear infinite",
+                    }}
                   />
                 ) : (
                   <Send size={18} />
@@ -513,19 +701,37 @@ function Chatbot() {
               </button>
             </div>
 
-            <p
-              className="
-                mt-2
-                text-center
-                text-[10px]
-                text-[#8C8177]
-              "
+            <div
+              style={{
+                marginTop: "5px",
+                textAlign: "right",
+                fontSize: "10px",
+                color: "#8B7565",
+              }}
             >
-              MUGI IA · Atención inicial
-            </p>
+              {mensaje.length}/500
+            </div>
           </form>
         </div>
       )}
+
+      {/* ======================================================
+          ANIMACIÓN
+      ====================================================== */}
+
+      <style>
+        {`
+          @keyframes mugiSpin {
+            from {
+              transform: rotate(0deg);
+            }
+
+            to {
+              transform: rotate(360deg);
+            }
+          }
+        `}
+      </style>
     </>
   );
 }
