@@ -1454,22 +1454,22 @@ function Empleado() {
       // DESCARGAR
       // --------------------------------------------------------
 
-      doc.save(
-        `${numeroFactura}.pdf`
-      );
-    } catch (error) {
-      console.error(
-        "Error al generar PDF:",
-        error
-      );
+        doc.save(
+          `${numeroFactura}.pdf`
+        );
+      } catch (error) {
+        console.error(
+          "Error al generar PDF:",
+          error
+        );
 
-      alert(
-        "No se pudo generar el PDF de la factura."
-      );
-    }
-  };
+        alert(
+          "No se pudo generar el PDF de la factura."
+        );
+      }
+    };
 
-  // ============================================================
+    // ============================================================
   // ESTADÍSTICAS
   // ============================================================
 

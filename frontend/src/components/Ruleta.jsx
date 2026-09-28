@@ -1,24 +1,28 @@
 import { useEffect, useState } from "react";
+
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useCarrito } from "../context/CarritoContext";
+import Alerta from "./Alerta";
 
 const API_URL = import.meta.env.VITE_API_URL;
+
 console.log("API_URL DE RULETA:", API_URL);
 
 function Ruleta() {
   const navigate = useNavigate();
   const { autenticado } = useAuth();
   const { agregarAlCarrito } = useCarrito();
+
   const [productos, setProductos] = useState([]);
   const [indice, setIndice] = useState(0);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+  const [alerta, setAlerta] = useState("");
 
   // ============================================================
   // OBTENER RUTA DE LA IMAGEN
   // ============================================================
-
   const obtenerRutaImagen = (imagen) => {
     if (!imagen) {
       return "";
@@ -44,7 +48,6 @@ function Ruleta() {
   // ============================================================
   // OBTENER PRODUCTOS DESDE LA API
   // ============================================================
-
   const obtenerProductos = async () => {
     try {
       setCargando(true);
@@ -63,7 +66,8 @@ function Ruleta() {
 
       if (!respuesta.ok) {
         throw new Error(
-          datos.message || "No se pudieron obtener los productos."
+          datos.message ||
+            "No se pudieron obtener los productos."
         );
       }
 
@@ -71,20 +75,26 @@ function Ruleta() {
       // [...]
       // o { productos: [...] }
       // o { data: [...] }
-
       const listaProductos = Array.isArray(datos)
         ? datos
         : datos.productos || datos.data || [];
 
-      console.log("Productos de la ruleta:", listaProductos);
+      console.log(
+        "Productos de la ruleta:",
+        listaProductos
+      );
 
       setProductos(listaProductos);
       setIndice(0);
     } catch (error) {
-      console.error("Error al obtener productos:", error);
+      console.error(
+        "Error al obtener productos:",
+        error
+      );
 
       setError(
-        error.message || "No se pudieron cargar los productos."
+        error.message ||
+          "No se pudieron cargar los productos."
       );
 
       setProductos([]);
@@ -96,7 +106,6 @@ function Ruleta() {
   // ============================================================
   // CARGAR PRODUCTOS AL ENTRAR
   // ============================================================
-
   useEffect(() => {
     obtenerProductos();
   }, []);
@@ -104,35 +113,51 @@ function Ruleta() {
   // ============================================================
   // SIGUIENTE PRODUCTO
   // ============================================================
-
   const siguiente = () => {
     if (productos.length === 0) {
       return;
     }
 
-    setIndice((prev) => (prev + 1) % productos.length);
+    setIndice(
+      (prev) => (prev + 1) % productos.length
+    );
   };
 
   // ============================================================
   // PRODUCTO ANTERIOR
   // ============================================================
-
   const anterior = () => {
     if (productos.length === 0) {
       return;
     }
 
     setIndice(
-      (prev) => (prev - 1 + productos.length) % productos.length
+      (prev) =>
+        (prev - 1 + productos.length) %
+        productos.length
     );
   };
 
+  // ============================================================
+  // COMPRAR
+  // ============================================================
   const comprar = () => {
     const producto = {
       id: actual.id || actual._id,
-      nombre: actual.nombre || actual.titulo || actual.name || "Producto MUGI",
-      descripcion: actual.descripcion || actual.description || "",
-      precio: Number(actual.precio ?? actual.price ?? 0),
+      nombre:
+        actual.nombre ||
+        actual.titulo ||
+        actual.name ||
+        "Producto MUGI",
+      descripcion:
+        actual.descripcion ||
+        actual.description ||
+        "",
+      precio: Number(
+        actual.precio ??
+          actual.price ??
+          0
+      ),
       imagen: obtenerRutaImagen(
         actual.imagen ||
           actual.imagen_url ||
@@ -141,19 +166,34 @@ function Ruleta() {
           actual.foto ||
           ""
       ),
-      stock: Number(actual.stock ?? actual.cantidad ?? 0),
+      stock: Number(
+        actual.stock ??
+          actual.cantidad ??
+          0
+      ),
     };
 
     if (producto.stock <= 0) {
-      alert("Este producto no tiene stock disponible.");
+      setAlerta(
+        "Este producto no tiene stock disponible."
+      );
+
+      setTimeout(() => {
+        setAlerta("");
+      }, 3000);
+
       return;
     }
 
     if (!autenticado) {
       localStorage.setItem(
         "productoPendienteMugi",
-        JSON.stringify({ ...producto, cantidad: 1 })
+        JSON.stringify({
+          ...producto,
+          cantidad: 1,
+        })
       );
+
       navigate("/login");
       return;
     }
@@ -164,14 +204,15 @@ function Ruleta() {
   // ============================================================
   // CAMBIO AUTOMÁTICO
   // ============================================================
-
   useEffect(() => {
     if (productos.length <= 1) {
       return;
     }
 
     const intervalo = setInterval(() => {
-      setIndice((prev) => (prev + 1) % productos.length);
+      setIndice(
+        (prev) => (prev + 1) % productos.length
+      );
     }, 5000);
 
     return () => clearInterval(intervalo);
@@ -180,7 +221,6 @@ function Ruleta() {
   // ============================================================
   // CARGANDO
   // ============================================================
-
   if (cargando) {
     return (
       <section className="h-full w-full">
@@ -196,7 +236,6 @@ function Ruleta() {
   // ============================================================
   // ERROR / SIN PRODUCTOS
   // ============================================================
-
   if (error || productos.length === 0) {
     return (
       <section className="h-full w-full">
@@ -207,7 +246,8 @@ function Ruleta() {
             </p>
 
             <p className="mt-3 text-sm text-white/70">
-              {error || "La API no devolvió productos."}
+              {error ||
+                "La API no devolvió productos."}
             </p>
 
             <button
@@ -228,7 +268,6 @@ function Ruleta() {
   // ============================================================
   // IMAGEN
   // ============================================================
-
   const imagen = obtenerRutaImagen(
     actual.imagen ||
       actual.imagen_url ||
@@ -241,7 +280,6 @@ function Ruleta() {
   // ============================================================
   // DATOS DEL PRODUCTO
   // ============================================================
-
   const titulo =
     actual.nombre ||
     actual.titulo ||
@@ -261,9 +299,10 @@ function Ruleta() {
   // ============================================================
   // RENDER
   // ============================================================
-
   return (
     <section className="h-full w-full">
+      <Alerta mensaje={alerta} />
+
       <div
         className="
           relative
@@ -277,7 +316,6 @@ function Ruleta() {
         {/* =====================================================
             IMAGEN
         ===================================================== */}
-
         {imagen ? (
           <img
             key={imagen}
@@ -298,7 +336,8 @@ function Ruleta() {
                 imagen
               );
 
-              e.currentTarget.style.display = "none";
+              e.currentTarget.style.display =
+                "none";
             }}
           />
         ) : (
@@ -312,7 +351,6 @@ function Ruleta() {
         {/* =====================================================
             DEGRADADO PRINCIPAL
         ===================================================== */}
-
         <div
           className="
             absolute
@@ -327,7 +365,6 @@ function Ruleta() {
         {/* =====================================================
             DEGRADADO LATERAL
         ===================================================== */}
-
         <div
           className="
             absolute
@@ -342,7 +379,6 @@ function Ruleta() {
         {/* =====================================================
             MARCO DORADO
         ===================================================== */}
-
         <div
           className="
             pointer-events-none
@@ -357,7 +393,6 @@ function Ruleta() {
         {/* =====================================================
             CABECERA
         ===================================================== */}
-
         <div
           className="
             absolute
@@ -401,7 +436,6 @@ function Ruleta() {
         {/* =====================================================
             INFORMACIÓN
         ===================================================== */}
-
         <div
           className="
             absolute
@@ -457,7 +491,6 @@ function Ruleta() {
           {/* =================================================
               PRECIO + BOTÓN
           ================================================= */}
-
           <div
             className="
               mt-5
@@ -475,7 +508,10 @@ function Ruleta() {
                 text-[#D4AF37]
               "
             >
-              ${Number(precio).toLocaleString("es-CO")}
+              $
+              {Number(precio).toLocaleString(
+                "es-CO"
+              )}
             </span>
 
             <button
@@ -507,7 +543,6 @@ function Ruleta() {
         {/* =====================================================
             FLECHA ANTERIOR
         ===================================================== */}
-
         <button
           onClick={anterior}
           type="button"
@@ -543,7 +578,6 @@ function Ruleta() {
         {/* =====================================================
             FLECHA SIGUIENTE
         ===================================================== */}
-
         <button
           onClick={siguiente}
           type="button"
@@ -579,7 +613,6 @@ function Ruleta() {
         {/* =====================================================
             INDICADORES
         ===================================================== */}
-
         <div
           className="
             absolute
@@ -595,7 +628,11 @@ function Ruleta() {
         >
           {productos.map((producto, i) => (
             <button
-              key={producto._id || producto.id || i}
+              key={
+                producto._id ||
+                producto.id ||
+                i
+              }
               type="button"
               onClick={() => setIndice(i)}
               aria-label={`Ir al producto ${i + 1}`}

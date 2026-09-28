@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import EstructuraPanel from "../components/EstructuraPanel";
+import Alerta from "./Alerta";
 import {
   Package,
   Headphones,
@@ -27,6 +28,8 @@ function Cliente() {
   const { usuario, token } = useAuth();
   const navigate = useNavigate();
 
+
+  const [alerta, setAlerta] = useState("");
   const [ventas, setVentas] = useState([]);
   const [cargandoVentas, setCargandoVentas] = useState(true);
   const [errorVentas, setErrorVentas] = useState("");
@@ -306,24 +309,25 @@ function Cliente() {
   // VER FACTURA
   // ============================================================
 
-  const verFactura = (venta) => {
-    const ventaId =
-      obtenerIdVenta(venta);
+const verFactura = (venta) => {
+  const ventaId = obtenerIdVenta(venta);
 
-    if (!ventaId) {
-      alert(
-        "No se encontró el identificador de la venta."
-      );
-      return;
-    }
+  if (!ventaId) {
+    setAlerta("No se encontró el identificador de la venta.");
 
-    navigate(`/factura/${ventaId}`);
-  };
+    setTimeout(() => {
+      setAlerta("");
+    }, 3000);
 
-  const descargarFactura = async (venta) => {
-    await generarFacturaPDF(venta);
-  };
+    return;
+  }
 
+  navigate(`/factura/${ventaId}`);
+};
+
+const descargarFactura = async (venta) => {
+  await generarFacturaPDF(venta);
+};
   // ============================================================
   // RECARGAR COMPRAS
   // ============================================================
@@ -425,6 +429,11 @@ function Cliente() {
                     size={14}
                     className="text-[#D4AF37]"
                   />
+
+              <Alerta
+  mensaje={alerta}
+  tipo="error"
+/>
 
                   <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#D4AF37]">
                     MUGI STORE

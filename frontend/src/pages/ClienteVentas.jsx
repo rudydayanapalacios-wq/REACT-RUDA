@@ -16,6 +16,7 @@ import EstructuraPanel from "../components/EstructuraPanel";
 
 import { useAuth } from "../context/AuthContext";
 import { generarFacturaPDF } from "../utils/generarFacturaPDF";
+import Alerta from "../components/Alerta";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -26,7 +27,7 @@ export default function ClienteVentas() {
   const [ventas, setVentas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
-
+  const [alerta, setAlerta] = useState("");
   const cargarVentas = async () => {
     if (!token) {
       setVentas([]);
@@ -116,24 +117,31 @@ export default function ClienteVentas() {
   };
 
   const verFactura = (venta) => {
-    const ventaId = obtenerIdVenta(venta);
+  const ventaId = obtenerIdVenta(venta);
 
-    if (!ventaId) {
-      alert("No se encontró el identificador de la compra.");
-      return;
-    }
+  if (!ventaId) {
+    setAlerta("No se encontró el identificador de la compra.");
 
-    navigate(`/factura/${ventaId}`);
-  };
+    setTimeout(() => {
+      setAlerta("");
+    }, 3000);
 
-  const descargarFactura = async (venta) => {
-    await generarFacturaPDF(venta);
-  };
+    return;
+  }
+
+  navigate(`/factura/${ventaId}`);
+};
 
   return (
     <EstructuraPanel rol="cliente" titulo="Cliente">
+      <Alerta
+    mensaje={alerta}
+    tipo="error"
+  />
       <section className="min-h-screen bg-[#EFE8DF] px-4 py-8 sm:px-6 md:px-8 md:py-12">
         <div className="mx-auto max-w-6xl">
+
+          
 
           {/* CABECERA */}
 

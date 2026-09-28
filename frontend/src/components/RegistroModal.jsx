@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+
 import Alerta from "./Alerta";
 
 export default function RegistroModal({
@@ -8,7 +9,6 @@ export default function RegistroModal({
   // =====================================================
   // ESTADOS
   // =====================================================
-
   const [formulario, setFormulario] = useState({
     nombre: "",
     apellido: "",
@@ -30,7 +30,6 @@ export default function RegistroModal({
   // =====================================================
   // CERRAR MODAL CON ESC
   // =====================================================
-
   useEffect(() => {
     const manejarTeclaEsc = (e) => {
       if (e.key === "Escape") {
@@ -48,8 +47,11 @@ export default function RegistroModal({
   // =====================================================
   // VALIDAR CAMPOS
   // =====================================================
-
-  const validarCampo = (nombre, valor, valoresFormulario = formulario) => {
+  const validarCampo = (
+    nombre,
+    valor,
+    valoresFormulario = formulario
+  ) => {
     let mensaje = "";
 
     switch (nombre) {
@@ -125,7 +127,9 @@ export default function RegistroModal({
           mensaje = "Debe incluir al menos un número";
         } else if (!/[^A-Za-z0-9\s]/.test(valor)) {
           mensaje = "Debe incluir al menos un carácter especial";
-        } else if (new TextEncoder().encode(valor).length > 72) {
+        } else if (
+          new TextEncoder().encode(valor).length > 72
+        ) {
           mensaje = "Máximo 72 bytes";
         }
         break;
@@ -133,7 +137,9 @@ export default function RegistroModal({
       case "confirmarContraseña":
         if (!valor) {
           mensaje = "Este campo es obligatorio";
-        } else if (valor !== valoresFormulario.contraseña) {
+        } else if (
+          valor !== valoresFormulario.contraseña
+        ) {
           mensaje = "Las contraseñas no coinciden";
         }
         break;
@@ -160,6 +166,7 @@ export default function RegistroModal({
         formulario[campo],
         formulario
       );
+
       if (!esValidoCampo) valido = false;
     });
 
@@ -169,19 +176,21 @@ export default function RegistroModal({
   // =====================================================
   // MANEJAR CAMBIOS
   // =====================================================
-
   const manejarCambio = (e) => {
     const { name, value } = e.target;
+
     const nuevoFormulario = {
       ...formulario,
       [name]: value,
     };
 
     setFormulario(nuevoFormulario);
-
     validarCampo(name, value, nuevoFormulario);
 
-    if (name === "contraseña" && nuevoFormulario.confirmarContraseña) {
+    if (
+      name === "contraseña" &&
+      nuevoFormulario.confirmarContraseña
+    ) {
       validarCampo(
         "confirmarContraseña",
         nuevoFormulario.confirmarContraseña,
@@ -199,6 +208,7 @@ export default function RegistroModal({
       "23456789",
       "!@#$%^&*()-_=+",
     ];
+
     const caracteres = grupos.join("");
     const valores = new Uint32Array(12);
 
@@ -208,16 +218,28 @@ export default function RegistroModal({
       grupo[valores[indice] % grupo.length]
     ));
 
-    for (let indice = contraseña.length; indice < 12; indice += 1) {
+    for (
+      let indice = contraseña.length;
+      indice < 12;
+      indice += 1
+    ) {
       contraseña.push(
         caracteres[valores[indice] % caracteres.length]
       );
     }
 
-    for (let indice = contraseña.length - 1; indice > 0; indice -= 1) {
+    for (
+      let indice = contraseña.length - 1;
+      indice > 0;
+      indice -= 1
+    ) {
       const aleatorio = new Uint32Array(1);
+
       crypto.getRandomValues(aleatorio);
-      const posicion = aleatorio[0] % (indice + 1);
+
+      const posicion =
+        aleatorio[0] % (indice + 1);
+
       [contraseña[indice], contraseña[posicion]] = [
         contraseña[posicion],
         contraseña[indice],
@@ -225,6 +247,7 @@ export default function RegistroModal({
     }
 
     const contraseñaGenerada = contraseña.join("");
+
     const nuevoFormulario = {
       ...formulario,
       contraseña: contraseñaGenerada,
@@ -232,20 +255,22 @@ export default function RegistroModal({
     };
 
     setFormulario(nuevoFormulario);
+
     setErrores((prev) => ({
       ...prev,
       contraseña: "",
       confirmarContraseña: "",
     }));
+
     setError("");
   };
 
   // =====================================================
   // CREAR CUENTA
   // =====================================================
-
   const crearCuenta = async (e) => {
     e.preventDefault();
+
     setError("");
 
     if (!formularioEsValido()) {
@@ -254,11 +279,10 @@ export default function RegistroModal({
     }
 
     // =====================================================
-    // DATOS QUE ENVÍA EL FRONTEND (coinciden con UsuarioCreate)
+    // DATOS QUE ENVÍA EL FRONTEND
     // =====================================================
-
     const formData = {
-      rol_id: 2, // 2 = Cliente
+      rol_id: 2,
       nombres: formulario.nombre,
       apellidos: formulario.apellido,
       tipo_documento: formulario.tipoDocumento,
@@ -275,7 +299,6 @@ export default function RegistroModal({
       // =====================================================
       // CONEXIÓN CON EL BACKEND FASTAPI
       // =====================================================
-
       const response = await fetch(
         `${import.meta.env.VITE_API_URL}/usuarios/`,
         {
@@ -291,15 +314,13 @@ export default function RegistroModal({
 
       // =====================================================
       // VERIFICAR RESPUESTA
-      // FastAPI devuelve el objeto de usuario directo (201),
-      // o {detail: "..."} cuando hay error (400/422/500)
       // =====================================================
-
       if (!response.ok) {
         const mensaje =
           typeof data.detail === "string"
             ? data.detail
             : "No fue posible registrar el usuario.";
+
         throw new Error(mensaje);
       }
 
@@ -308,13 +329,14 @@ export default function RegistroModal({
       // =====================================================
       // GUARDAR USUARIO
       // =====================================================
-
-      localStorage.setItem("usuarioMugi", JSON.stringify(data));
+      localStorage.setItem(
+        "usuarioMugi",
+        JSON.stringify(data)
+      );
 
       // =====================================================
       // ALERTA POSITIVA
       // =====================================================
-
       setAlerta("Cuenta creada correctamente");
 
       setTimeout(() => {
@@ -324,7 +346,6 @@ export default function RegistroModal({
       // =====================================================
       // AVISAR AL COMPONENTE PADRE
       // =====================================================
-
       if (typeof alRegistrar === "function") {
         alRegistrar(data);
       }
@@ -332,7 +353,8 @@ export default function RegistroModal({
       console.error("Error al registrar:", error);
 
       setError(
-        error.message || "No fue posible registrar el usuario."
+        error.message ||
+          "No fue posible registrar el usuario."
       );
     } finally {
       setEnviando(false);
@@ -342,7 +364,6 @@ export default function RegistroModal({
   // =====================================================
   // ESTILO GENERAL DE INPUTS
   // =====================================================
-
   const estiloInput = `
     w-full
     rounded-2xl
@@ -378,10 +399,13 @@ export default function RegistroModal({
     mayuscula: /[A-Z]/.test(formulario.contraseña),
     minuscula: /[a-z]/.test(formulario.contraseña),
     numero: /\d/.test(formulario.contraseña),
-    especial: /[^A-Za-z0-9\s]/.test(formulario.contraseña),
+    especial: /[^A-Za-z0-9\s]/.test(
+      formulario.contraseña
+    ),
   };
 
-  const contraseñaValida = Object.values(requisitosContraseña).every(Boolean);
+  const contraseñaValida =
+    Object.values(requisitosContraseña).every(Boolean);
 
   const contadorCampo = (nombre, maximo) => (
     <span className="text-[10px] text-[#927E70] dark:text-[#C8B9B5]">
@@ -389,18 +413,19 @@ export default function RegistroModal({
     </span>
   );
 
-  const hayErrores = Object.values(errores).some((msg) => msg !== "");
+  const hayErrores = Object.values(errores).some(
+    (msg) => msg !== ""
+  );
 
   // =====================================================
   // MODAL
   // =====================================================
-
   return (
     <>
+      {/* ALERTA PERSONALIZADA */}
       <Alerta mensaje={alerta} />
 
       {/* FONDO DEL MODAL */}
-
       <div
         className="
           fixed
@@ -423,7 +448,6 @@ export default function RegistroModal({
         onClick={cerrarModal}
       >
         {/* CONTENEDOR PRINCIPAL */}
-
         <div
           className="
             relative
@@ -447,7 +471,6 @@ export default function RegistroModal({
           onClick={(e) => e.stopPropagation()}
         >
           {/* FOTO SUPERIOR */}
-
           <div className="relative h-44 overflow-hidden sm:h-52 md:h-56">
             <img
               src="/img/tripulacion.jpg"
@@ -482,7 +505,6 @@ export default function RegistroModal({
           </div>
 
           {/* BOTÓN CERRAR */}
-
           <button
             type="button"
             onClick={cerrarModal}
@@ -516,10 +538,8 @@ export default function RegistroModal({
           </button>
 
           {/* CONTENIDO */}
-
           <div className="p-6 sm:p-8 md:p-10">
             {/* CABECERA */}
-
             <div className="mb-8 flex items-center gap-4">
               <div
                 className="
@@ -538,7 +558,11 @@ export default function RegistroModal({
                   dark:bg-[#160B0C]
                 "
               >
-                <img src="/img/logo.png" alt="MUGI" className="h-full w-full object-contain" />
+                <img
+                  src="/img/logo.png"
+                  alt="MUGI"
+                  className="h-full w-full object-contain"
+                />
               </div>
 
               <div>
@@ -553,7 +577,6 @@ export default function RegistroModal({
             </div>
 
             {/* ERROR GENERAL */}
-
             {error && (
               <div
                 className="
@@ -577,10 +600,8 @@ export default function RegistroModal({
             )}
 
             {/* FORMULARIO */}
-
             <form onSubmit={crearCuenta} className="space-y-6">
               {/* SECCIÓN 01 */}
-
               <div>
                 <div className="mb-4 flex items-center gap-3">
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#7F0303] text-[10px] font-bold text-white dark:bg-[#8F1D24]">
@@ -646,7 +667,6 @@ export default function RegistroModal({
               </div>
 
               {/* DOCUMENTOS */}
-
               <div className="grid gap-4 sm:grid-cols-2">
                 {/* TIPO DOCUMENTO */}
                 <div>
@@ -658,15 +678,22 @@ export default function RegistroModal({
                     name="tipoDocumento"
                     value={formulario.tipoDocumento}
                     onChange={manejarCambio}
-                      maxLength={30}
                     required
                     className={claseInput("tipoDocumento")}
                   >
                     <option value="">Selecciona</option>
-                    <option value="CC">Cédula de ciudadanía</option>
-                    <option value="TI">Tarjeta de identidad</option>
-                    <option value="CE">Cédula de extranjería</option>
-                    <option value="PASAPORTE">Pasaporte</option>
+                    <option value="CC">
+                      Cédula de ciudadanía
+                    </option>
+                    <option value="TI">
+                      Tarjeta de identidad
+                    </option>
+                    <option value="CE">
+                      Cédula de extranjería
+                    </option>
+                    <option value="PASAPORTE">
+                      Pasaporte
+                    </option>
                   </select>
 
                   {errores.tipoDocumento && (
@@ -702,7 +729,6 @@ export default function RegistroModal({
               </div>
 
               {/* DIRECCIÓN */}
-
               <div>
                 <label className="mb-2 block text-sm font-semibold text-[#3D1717] dark:text-[#F8F3EA]">
                   Dirección
@@ -727,7 +753,6 @@ export default function RegistroModal({
               </div>
 
               {/* SECCIÓN 02 */}
-
               <div>
                 <div className="mb-4 flex items-center gap-3">
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#7F0303] text-[10px] font-bold text-white dark:bg-[#8F1D24]">
@@ -764,6 +789,7 @@ export default function RegistroModal({
                         {errores.correo}
                       </p>
                     )}
+
                     <div className="mt-1 flex justify-end">
                       {contadorCampo("correo", 150)}
                     </div>
@@ -796,7 +822,6 @@ export default function RegistroModal({
               </div>
 
               {/* SECCIÓN 03 */}
-
               <div>
                 <div className="mb-4 flex items-center gap-3">
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#7F0303] text-[10px] font-bold text-white dark:bg-[#8F1D24]">
@@ -843,15 +868,34 @@ export default function RegistroModal({
 
                     <div className="mt-3 grid grid-cols-1 gap-1 text-xs sm:grid-cols-2">
                       {[
-                        [requisitosContraseña.longitud, "8-72 caracteres"],
-                        [requisitosContraseña.mayuscula, "Una mayúscula"],
-                        [requisitosContraseña.minuscula, "Una minúscula"],
-                        [requisitosContraseña.numero, "Un número"],
-                        [requisitosContraseña.especial, "Un carácter especial"],
+                        [
+                          requisitosContraseña.longitud,
+                          "8-72 caracteres",
+                        ],
+                        [
+                          requisitosContraseña.mayuscula,
+                          "Una mayúscula",
+                        ],
+                        [
+                          requisitosContraseña.minuscula,
+                          "Una minúscula",
+                        ],
+                        [
+                          requisitosContraseña.numero,
+                          "Un número",
+                        ],
+                        [
+                          requisitosContraseña.especial,
+                          "Un carácter especial",
+                        ],
                       ].map(([cumple, texto]) => (
                         <span
                           key={texto}
-                          className={cumple ? "text-green-600" : "text-[#927E70]"}
+                          className={
+                            cumple
+                              ? "text-green-600"
+                              : "text-[#927E70]"
+                          }
                         >
                           {cumple ? "✓" : "○"} {texto}
                         </span>
@@ -884,7 +928,9 @@ export default function RegistroModal({
                       placeholder="Repite la contraseña"
                       maxLength={72}
                       required
-                      className={claseInput("confirmarContraseña")}
+                      className={claseInput(
+                        "confirmarContraseña"
+                      )}
                     />
 
                     {errores.confirmarContraseña && (
@@ -894,40 +940,59 @@ export default function RegistroModal({
                     )}
 
                     <div className="mt-1 flex justify-end">
-                      {contadorCampo("confirmarContraseña", 72)}
+                      {contadorCampo(
+                        "confirmarContraseña",
+                        72
+                      )}
                     </div>
                   </div>
                 </div>
               </div>
 
+              {/* TÉRMINOS */}
               <label className="flex items-start gap-3 rounded-2xl border border-[#D4AF37]/20 bg-white/40 p-4 text-sm text-[#765E52] dark:bg-[#160B0C]/40 dark:text-[#C8B9B5]">
                 <input
                   type="checkbox"
                   checked={aceptaTerminos}
-                  onChange={(e) => setAceptaTerminos(e.target.checked)}
+                  onChange={(e) =>
+                    setAceptaTerminos(e.target.checked)
+                  }
                   className="mt-1 h-4 w-4 accent-[#7F0303]"
                 />
+
                 <span>
-                  Acepto los términos y condiciones y autorizo el tratamiento de mis datos personales.
+                  Acepto los términos y condiciones y autorizo
+                  el tratamiento de mis datos personales.
                 </span>
               </label>
 
               {/* BOTONES */}
-
               <div className="flex flex-col gap-3 pt-2 sm:flex-row">
                 <button
                   type="submit"
-                    disabled={hayErrores || !contraseñaValida || !aceptaTerminos || enviando}
+                  disabled={
+                    hayErrores ||
+                    !contraseñaValida ||
+                    !aceptaTerminos ||
+                    enviando
+                  }
                   className={`
                     flex-1 rounded-2xl px-6 py-4 font-semibold text-white shadow-lg
                     transition-all duration-300 active:scale-[0.98]
-                    ${hayErrores || !contraseñaValida || !aceptaTerminos || enviando
-                      ? "bg-[#7F0303]/40 cursor-not-allowed"
-                      : "bg-[#7F0303] hover:-translate-y-1 hover:bg-[#52070A] hover:shadow-xl"}
+                    ${
+                      hayErrores ||
+                      !contraseñaValida ||
+                      !aceptaTerminos ||
+                      enviando
+                        ? "bg-[#7F0303]/40 cursor-not-allowed"
+                        : "bg-[#7F0303] hover:-translate-y-1 hover:bg-[#52070A] hover:shadow-xl"
+                    }
                     dark:bg-[#D4AF37] dark:text-[#3D1717] dark:hover:bg-[#F0CC55]
                   `}
                 >
-                  {enviando ? "Creando cuenta..." : "Crear mi cuenta →"}
+                  {enviando
+                    ? "Creando cuenta..."
+                    : "Crear mi cuenta →"}
                 </button>
 
                 <button
@@ -960,9 +1025,9 @@ export default function RegistroModal({
               </div>
 
               {/* TEXTO FINAL */}
-
               <p className="pt-1 text-center text-xs leading-relaxed text-[#927E70] dark:text-[#C8B9B5]">
-                Al crear tu cuenta podrás guardar tus datos y disfrutar de tu experiencia en MUGI STORE.
+                Al crear tu cuenta podrás guardar tus datos y
+                disfrutar de tu experiencia en MUGI STORE.
               </p>
             </form>
           </div>
@@ -971,3 +1036,4 @@ export default function RegistroModal({
     </>
   );
 }
+
