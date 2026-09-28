@@ -20,7 +20,12 @@ if DATABASE_URL.startswith("postgresql://"):
 
 engine = create_engine(
     DATABASE_URL,
-    echo=True
+    echo=True,
+    pool_size=5,
+    max_overflow=5,
+    pool_timeout=30,
+    pool_recycle=1800,
+    pool_pre_ping=True
 )
 
 SessionLocal = sessionmaker(
