@@ -8,25 +8,16 @@ from .routes import auth, productos, usuarios, ventas, pqr, chatbot
 # ==========================================================
 # CREAR TABLAS
 # ==========================================================
+
 Base.metadata.create_all(bind=engine)
 
 
 # ==========================================================
 # CREAR APLICACIÓN
 # ==========================================================
+
 app = FastAPI(title="API Proyecto React")
 
-
-# ==========================================================
-# CORS
-# ==========================================================
-# ==========================================================
-# CORS
-# ==========================================================
-
-# ==========================================================
-# CORS
-# ==========================================================
 
 # ==========================================================
 # CORS
@@ -34,19 +25,26 @@ app = FastAPI(title="API Proyecto React")
 
 app.add_middleware(
     CORSMiddleware,
+
     allow_origins=[
         "http://localhost:5173",
         "https://mugi-store.vercel.app",
     ],
+
     allow_origin_regex=r"https://mugi-store(-[a-z0-9]+)?-rudy-05c0\.vercel\.app",
+
     allow_credentials=True,
+
     allow_methods=["*"],
+
     allow_headers=["*"],
 )
+
 
 # ==========================================================
 # RUTAS
 # ==========================================================
+
 app.include_router(auth.router)
 app.include_router(productos.router)
 app.include_router(usuarios.router)
@@ -58,6 +56,7 @@ app.include_router(chatbot.router)
 # ==========================================================
 # RUTA PRINCIPAL
 # ==========================================================
+
 @app.get("/")
 def root():
     return {
