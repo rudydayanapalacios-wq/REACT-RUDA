@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+
 import {
   X,
   Send,
@@ -7,6 +8,8 @@ import {
   Loader2,
   Sparkles,
   Trash2,
+  Move,
+  Maximize2,
 } from "lucide-react";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -35,6 +38,63 @@ function Chatbot() {
 
   const mensajesRef = useRef(null);
   const inputRef = useRef(null);
+  const chatbotRef = useRef(null);
+
+  // ==========================================================
+  // POSICIÓN Y TAMAÑO DEL CHATBOT
+  // ==========================================================
+
+  const obtenerTamanoInicial = () => {
+    const ancho = Math.min(390, window.innerWidth - 32);
+    const alto = Math.min(620, window.innerHeight - 48);
+
+    return {
+      ancho: Math.max(280, ancho),
+      alto: Math.max(420, alto),
+    };
+  };
+
+  const calcularPosicionInicial = () => {
+    const { ancho, alto } = obtenerTamanoInicial();
+
+    return {
+      x: Math.max(16, window.innerWidth - ancho - 24),
+      y: Math.max(16, window.innerHeight - alto - 24),
+    };
+  };
+
+  const posicionInicial = calcularPosicionInicial();
+
+  const [posicion, setPosicion] = useState(posicionInicial);
+
+  const [tamano, setTamano] = useState(() => {
+    const inicial = obtenerTamanoInicial();
+
+    return {
+      ancho: inicial.ancho,
+      alto: inicial.alto,
+    };
+  });
+
+  // Referencias para mover
+  const arrastrandoRef = useRef(false);
+  const inicioArrastreRef = useRef({
+    mouseX: 0,
+    mouseY: 0,
+    x: 0,
+    y: 0,
+  });
+
+  // Referencias para cambiar tamaño
+  const redimensionandoRef = useRef(false);
+  const inicioResizeRef = useRef({
+    mouseX: 0,
+    mouseY: 0,
+    ancho: 0,
+    alto: 0,
+    x: 0,
+    y: 0,
+  });
 
   // ==========================================================
   // BAJAR AUTOMÁTICAMENTE AL ÚLTIMO MENSAJE
@@ -42,8 +102,7 @@ function Chatbot() {
 
   useEffect(() => {
     if (mensajesRef.current) {
-      mensajesRef.current.scrollTop =
-        mensajesRef.current.scrollHeight;
+      mensajesRef.current.scrollTop = mensajesRef.current.scrollHeight;
     }
   }, [mensajes, cargando]);
 
@@ -54,10 +113,211 @@ function Chatbot() {
   useEffect(() => {
     if (abierto && inputRef.current) {
       setTimeout(() => {
-        inputRef.current.focus();
+        inputRef.current?.focus();
       }, 100);
     }
   }, [abierto]);
+
+  // ==========================================================
+  // ESC + CLIC FUERA
+  // ==========================================================
+
+  useEffect(() => {
+    if (!abierto) {
+      return;
+    }
+
+    const manejarTeclaGlobal = (e) => {
+      if (e.key === "Escape") {
+        setAbierto(false);
+      }
+    };
+
+    const manejarClickFuera = (e) => {
+      if (
+        chatbotRef.current &&
+        !chatbotRef.current.contains(e.target) &&
+        !arrastrandoRef.current &&
+        !redimensionandoRef.current
+      ) {
+        setAbierto(false);
+      }
+    };
+
+    document.addEventListener("keydown", manejarTeclaGlobal);
+    document.addEventListener("mousedown", manejarClickFuera);
+
+    return () => {
+      document.removeEventListener("keydown", manejarTeclaGlobal);
+      document.removeEventListener("mousedown", manejarClickFuera);
+    };
+  }, [abierto]);
+
+  // ==========================================================
+  // EVITAR QUE EL CHAT SE SALGA DE LA PANTALLA
+  // ==========================================================
+
+  useEffect(() => {
+    const ajustarPantalla = () => {
+      setPosicion((actual) => {
+        const maxX = Math.max(
+          16,
+          window.innerWidth - tamano.ancho - 16
+        );
+
+        const maxY = Math.max(
+          16,
+          window.innerHeight - tamano.alto - 16
+        );
+
+        return {
+          x: Math.min(Math.max(actual.x, 16), maxX),
+          y: Math.min(Math.max(actual.y, 16), maxY),
+        };
+      });
+
+      setTamano((actual) => {
+        const maxAncho = Math.max(280, window.innerWidth - 32);
+        const maxAlto = Math.max(420, window.innerHeight - 32);
+
+        return {
+          ancho: Math.min(actual.ancho, maxAncho),
+          alto: Math.min(actual.alto, maxAlto),
+        };
+      });
+    };
+
+    window.addEventListener("resize", ajustarPantalla);
+
+    return () => {
+      window.removeEventListener("resize", ajustarPantalla);
+    };
+  }, [tamano.ancho, tamano.alto]);
+
+  // ==========================================================
+  // MOVER CHATBOT
+  // ==========================================================
+
+  const iniciarArrastre = (e) => {
+    if (e.button !== 0) {
+      return;
+    }
+
+    arrastrandoRef.current = true;
+
+    inicioArrastreRef.current = {
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      x: posicion.x,
+      y: posicion.y,
+    };
+
+    document.body.style.userSelect = "none";
+
+    document.addEventListener("mousemove", moverChatbot);
+    document.addEventListener("mouseup", terminarArrastre);
+  };
+
+  const moverChatbot = (e) => {
+    if (!arrastrandoRef.current) {
+      return;
+    }
+
+    const inicio = inicioArrastreRef.current;
+
+    const nuevoX = inicio.x + (e.clientX - inicio.mouseX);
+    const nuevoY = inicio.y + (e.clientY - inicio.mouseY);
+
+    const maxX = Math.max(
+      16,
+      window.innerWidth - tamano.ancho - 16
+    );
+
+    const maxY = Math.max(
+      16,
+      window.innerHeight - tamano.alto - 16
+    );
+
+    setPosicion({
+      x: Math.min(Math.max(nuevoX, 16), maxX),
+      y: Math.min(Math.max(nuevoY, 16), maxY),
+    });
+  };
+
+  const terminarArrastre = () => {
+    arrastrandoRef.current = false;
+
+    document.body.style.userSelect = "";
+
+    document.removeEventListener("mousemove", moverChatbot);
+    document.removeEventListener("mouseup", terminarArrastre);
+  };
+
+  // ==========================================================
+  // CAMBIAR TAMAÑO
+  // ==========================================================
+
+  const iniciarRedimension = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    redimensionandoRef.current = true;
+
+    inicioResizeRef.current = {
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      ancho: tamano.ancho,
+      alto: tamano.alto,
+      x: posicion.x,
+      y: posicion.y,
+    };
+
+    document.body.style.userSelect = "none";
+
+    document.addEventListener("mousemove", cambiarTamano);
+    document.addEventListener("mouseup", terminarRedimension);
+  };
+
+  const cambiarTamano = (e) => {
+    if (!redimensionandoRef.current) {
+      return;
+    }
+
+    const inicio = inicioResizeRef.current;
+
+    const diferenciaX = e.clientX - inicio.mouseX;
+    const diferenciaY = e.clientY - inicio.mouseY;
+
+    const nuevoAncho = Math.max(
+      280,
+      Math.min(
+        inicio.ancho + diferenciaX,
+        window.innerWidth - inicio.x - 16
+      )
+    );
+
+    const nuevoAlto = Math.max(
+      420,
+      Math.min(
+        inicio.alto + diferenciaY,
+        window.innerHeight - inicio.y - 16
+      )
+    );
+
+    setTamano({
+      ancho: nuevoAncho,
+      alto: nuevoAlto,
+    });
+  };
+
+  const terminarRedimension = () => {
+    redimensionandoRef.current = false;
+
+    document.body.style.userSelect = "";
+
+    document.removeEventListener("mousemove", cambiarTamano);
+    document.removeEventListener("mouseup", terminarRedimension);
+  };
 
   // ==========================================================
   // ENVIAR MENSAJE
@@ -70,7 +330,6 @@ function Chatbot() {
       return;
     }
 
-    // Mostrar inmediatamente el mensaje del usuario
     setMensajes((anteriores) => [
       ...anteriores,
       {
@@ -90,21 +349,14 @@ function Chatbot() {
     }, 20000);
 
     try {
-      // ======================================================
-      // CONEXIÓN CON FASTAPI
-      // ======================================================
-
       const response = await fetch(`${API_URL}/chatbot/`, {
         method: "POST",
-
         headers: {
           "Content-Type": "application/json",
         },
-
         body: JSON.stringify({
           mensaje: texto,
         }),
-
         signal: controller.signal,
       });
 
@@ -128,10 +380,6 @@ function Chatbot() {
         datos?.respuesta?.trim() ||
         "No recibí una respuesta del asistente.";
 
-      // ======================================================
-      // MOSTRAR RESPUESTA DEL BACKEND
-      // ======================================================
-
       setMensajes((anteriores) => [
         ...anteriores,
         {
@@ -149,9 +397,7 @@ function Chatbot() {
       if (error.name === "AbortError") {
         mensajeError =
           "La respuesta tardó demasiado. Revisa tu conexión e inténtalo nuevamente.";
-      } else if (
-        error.message?.includes("Failed to fetch")
-      ) {
+      } else if (error.message?.includes("Failed to fetch")) {
         mensajeError =
           "No pude conectarme con el servidor de MUGI. Verifica que el backend esté funcionando.";
       } else if (error.message) {
@@ -238,12 +484,22 @@ function Chatbot() {
       {!abierto && (
         <button
           type="button"
-          onClick={() => setAbierto(true)}
+          onClick={() => {
+            const nuevoTamano = obtenerTamanoInicial();
+
+            setTamano({
+              ancho: nuevoTamano.ancho,
+              alto: nuevoTamano.alto,
+            });
+
+            setPosicion(calcularPosicionInicial());
+            setAbierto(true);
+          }}
           aria-label="Abrir asistente MUGI IA"
           style={{
             position: "fixed",
             right: "24px",
-            bottom: "24px",
+            bottom: "100px",
             width: "64px",
             height: "64px",
             borderRadius: "50%",
@@ -276,12 +532,17 @@ function Chatbot() {
 
       {abierto && (
         <div
+          ref={chatbotRef}
           style={{
             position: "fixed",
-            right: "24px",
-            bottom: "24px",
-            width: "min(390px, calc(100vw - 32px))",
-            height: "min(620px, calc(100vh - 48px))",
+            left: `${posicion.x}px`,
+            top: `${posicion.y}px`,
+            width: `${tamano.ancho}px`,
+            height: `${tamano.alto}px`,
+            maxWidth: "calc(100vw - 32px)",
+            maxHeight: "calc(100vh - 32px)",
+            minWidth: "280px",
+            minHeight: "420px",
             background: "#F8F3EA",
             border: "1px solid #D4AF37",
             borderRadius: "20px",
@@ -293,10 +554,11 @@ function Chatbot() {
           }}
         >
           {/* ==================================================
-              HEADER
+              HEADER ARRASTRABLE
           ================================================== */}
 
           <div
+            onMouseDown={iniciarArrastre}
             style={{
               background: "#7F0303",
               color: "#F8F3EA",
@@ -305,7 +567,10 @@ function Chatbot() {
               alignItems: "center",
               justifyContent: "space-between",
               borderBottom: "2px solid #D4AF37",
+              cursor: "move",
+              userSelect: "none",
             }}
+            title="Arrastra para mover MUGI IA"
           >
             <div
               style={{
@@ -324,6 +589,7 @@ function Chatbot() {
                   alignItems: "center",
                   justifyContent: "center",
                   overflow: "hidden",
+                  flexShrink: 0,
                 }}
               >
                 <img
@@ -365,8 +631,17 @@ function Chatbot() {
                 gap: "6px",
               }}
             >
+              <Move
+                size={17}
+                style={{
+                  opacity: 0.65,
+                  marginRight: "2px",
+                }}
+              />
+
               <button
                 type="button"
+                onMouseDown={(e) => e.stopPropagation()}
                 onClick={reiniciarChat}
                 disabled={cargando}
                 title="Reiniciar conversación"
@@ -377,9 +652,7 @@ function Chatbot() {
                   border: "none",
                   background: "transparent",
                   color: "#F8F3EA",
-                  cursor: cargando
-                    ? "not-allowed"
-                    : "pointer",
+                  cursor: cargando ? "not-allowed" : "pointer",
                   opacity: cargando ? 0.5 : 1,
                   display: "flex",
                   alignItems: "center",
@@ -391,6 +664,7 @@ function Chatbot() {
 
               <button
                 type="button"
+                onMouseDown={(e) => e.stopPropagation()}
                 onClick={() => setAbierto(false)}
                 title="Cerrar chatbot"
                 aria-label="Cerrar chatbot"
@@ -427,8 +701,7 @@ function Chatbot() {
             }}
           >
             {mensajes.map((item) => {
-              const esUsuario =
-                item.tipo === "usuario";
+              const esUsuario = item.tipo === "usuario";
 
               return (
                 <div
@@ -550,9 +823,7 @@ function Chatbot() {
                     }}
                   />
 
-                  <span>
-                    MUGI IA está pensando...
-                  </span>
+                  <span>MUGI IA está pensando...</span>
                 </div>
               </div>
             )}
@@ -594,9 +865,7 @@ function Chatbot() {
                   <button
                     key={sugerencia}
                     type="button"
-                    onClick={() =>
-                      usarSugerencia(sugerencia)
-                    }
+                    onClick={() => usarSugerencia(sugerencia)}
                     style={{
                       border: "1px solid #D8BA98",
                       background: "#F8F3EA",
@@ -640,9 +909,7 @@ function Chatbot() {
               <textarea
                 ref={inputRef}
                 value={mensaje}
-                onChange={(e) =>
-                  setMensaje(e.target.value)
-                }
+                onChange={(e) => setMensaje(e.target.value)}
                 onKeyDown={manejarTecla}
                 placeholder="Escribe tu pregunta..."
                 maxLength={500}
@@ -712,6 +979,31 @@ function Chatbot() {
               {mensaje.length}/500
             </div>
           </form>
+
+          {/* ==================================================
+              CONTROL PARA CAMBIAR TAMAÑO
+          ================================================== */}
+
+          <div
+            onMouseDown={iniciarRedimension}
+            title="Arrastra para cambiar el tamaño"
+            style={{
+              position: "absolute",
+              right: "3px",
+              bottom: "3px",
+              width: "22px",
+              height: "22px",
+              cursor: "nwse-resize",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#7F0303",
+              opacity: 0.65,
+              zIndex: 10,
+            }}
+          >
+            <Maximize2 size={15} />
+          </div>
         </div>
       )}
 
