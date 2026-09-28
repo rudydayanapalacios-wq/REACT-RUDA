@@ -27,7 +27,6 @@ function ClientePQR() {
   const [pqr, setPqr] = useState([]);
   const [cargandoPqr, setCargandoPqr] = useState(true);
   const [errorPqr, setErrorPqr] = useState("");
-
   const [enviandoPqr, setEnviandoPqr] = useState(false);
   const [mensajePqr, setMensajePqr] = useState("");
   const [modalPqrAbierto, setModalPqrAbierto] = useState(false);
@@ -108,7 +107,7 @@ function ClientePQR() {
       setMensajePqr(
         "Debes iniciar sesión para enviar una PQR."
       );
-      return;
+      return false;
     }
 
     if (
@@ -119,7 +118,7 @@ function ClientePQR() {
       setMensajePqr(
         "Completa todos los campos antes de enviar la PQR."
       );
-      return;
+      return false;
     }
 
     try {
@@ -158,16 +157,20 @@ function ClientePQR() {
       });
 
       await cargarPqr();
+
       return true;
-   } catch (error) {
-  console.error("Error enviando PQR:", error);
+    } catch (error) {
+      console.error("Error enviando PQR:", error);
 
-  setMensajePqr(
-    error.message || "No se pudo enviar la PQR."
-  );
+      setMensajePqr(
+        error.message || "No se pudo enviar la PQR."
+      );
 
-  return false;
-}
+      return false;
+    } finally {
+      setEnviandoPqr(false);
+    }
+  };
 
   // ==========================================================
   // ESTADO PQR
@@ -249,10 +252,7 @@ function ClientePQR() {
   // ==========================================================
 
   return (
-    <EstructuraPanel
-      rol="cliente"
-      titulo="Cliente"
-    >
+    <EstructuraPanel rol="cliente" titulo="Cliente">
       <section className="min-h-screen bg-[#EFE8DF] px-3 py-5 sm:px-5 lg:px-7">
         <div className="mx-auto max-w-[1500px]">
 
@@ -276,8 +276,8 @@ function ClientePQR() {
 
           <section className="mb-8 overflow-hidden rounded-[2rem] bg-[#241415] p-7 text-[#F8F3EA] shadow-xl sm:p-9">
             <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-
               <div className="max-w-3xl">
+
                 <div className="mb-4 flex items-center gap-2">
                   <Sparkles
                     size={17}
@@ -392,25 +392,21 @@ function ClientePQR() {
           </div>
 
           {/* ==================================================
-              FORMULARIO
+              BOTÓN NUEVA PQR
           ================================================== */}
 
-        {/* ==================================================
-    BOTÓN NUEVA PQR
-================================================== */}
-
-<div className="mb-8 flex justify-end">
-  <button
-    onClick={() => {
-      setMensajePqr("");
-      setModalPqrAbierto(true);
-    }}
-    className="inline-flex items-center gap-2 rounded-xl bg-[#7F0303] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#5E0202]"
-  >
-    <Send size={16} />
-    Nueva PQR
-  </button>
-</div>
+          <div className="mb-8 flex justify-end">
+            <button
+              onClick={() => {
+                setMensajePqr("");
+                setModalPqrAbierto(true);
+              }}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#7F0303] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#5E0202]"
+            >
+              <Send size={16} />
+              Nueva PQR
+            </button>
+          </div>
 
           {/* ==================================================
               HISTORIAL
@@ -464,6 +460,7 @@ function ClientePQR() {
                 </div>
               </div>
             ) : pqr.length === 0 ? (
+
               /* SIN PQR */
 
               <div className="flex min-h-[220px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#D4AF37]/30 bg-[#EFE8DF] px-5 text-center">
@@ -481,15 +478,15 @@ function ClientePQR() {
                   solicitud, aparecerá aquí su seguimiento.
                 </p>
               </div>
+
             ) : (
+
               /* LISTADO */
 
               <div className="space-y-5">
                 {pqr.map((item) => {
                   const tieneRespuesta =
-                    String(
-                      item?.respuesta || ""
-                    ).trim() !== "";
+                    String(item?.respuesta || "").trim() !== "";
 
                   return (
                     <article
@@ -500,8 +497,8 @@ function ClientePQR() {
                       {/* CABECERA */}
 
                       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-
                         <div>
+
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="rounded-full bg-[#7F0303] px-3 py-1 text-xs font-bold text-white">
                               {item.tipo}
@@ -549,6 +546,7 @@ function ClientePQR() {
 
                       <div className="mt-4 rounded-xl border border-[#D4AF37]/20 bg-[#F8F3EA] p-4">
                         <div className="flex items-center gap-2">
+
                           {tieneRespuesta ? (
                             <CheckCircle2
                               size={18}
@@ -601,12 +599,17 @@ function ClientePQR() {
               <ArrowRight size={15} />
             </Link>
           </div>
-
         </div>
       </section>
-            {modalPqrAbierto && (
+
+      {/* ======================================================
+          MODAL NUEVA PQR
+      ====================================================== */}
+
+      {modalPqrAbierto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="w-full max-w-2xl rounded-[2rem] bg-[#F8F3EA] p-6 shadow-2xl">
+
             <div className="mb-6 flex items-center justify-between">
               <h2 className="font-serif text-2xl font-bold text-[#7F0303]">
                 Enviar PQR
@@ -631,6 +634,9 @@ function ClientePQR() {
               }}
               className="space-y-5"
             >
+
+              {/* TIPO */}
+
               <div>
                 <label className="mb-2 block text-sm font-bold text-[#241415]">
                   Tipo
@@ -639,7 +645,10 @@ function ClientePQR() {
                 <select
                   value={formularioPqr.tipo}
                   onChange={(e) =>
-                    cambiarFormularioPqr("tipo", e.target.value)
+                    cambiarFormularioPqr(
+                      "tipo",
+                      e.target.value
+                    )
                   }
                   className="w-full rounded-xl border border-[#D8BA98] px-4 py-3"
                 >
@@ -650,6 +659,8 @@ function ClientePQR() {
                 </select>
               </div>
 
+              {/* ASUNTO */}
+
               <div>
                 <label className="mb-2 block text-sm font-bold text-[#241415]">
                   Asunto
@@ -659,11 +670,16 @@ function ClientePQR() {
                   type="text"
                   value={formularioPqr.asunto}
                   onChange={(e) =>
-                    cambiarFormularioPqr("asunto", e.target.value)
+                    cambiarFormularioPqr(
+                      "asunto",
+                      e.target.value
+                    )
                   }
                   className="w-full rounded-xl border border-[#D8BA98] px-4 py-3"
                 />
               </div>
+
+              {/* DESCRIPCIÓN */}
 
               <div>
                 <label className="mb-2 block text-sm font-bold text-[#241415]">
@@ -674,17 +690,24 @@ function ClientePQR() {
                   rows={6}
                   value={formularioPqr.descripcion}
                   onChange={(e) =>
-                    cambiarFormularioPqr("descripcion", e.target.value)
+                    cambiarFormularioPqr(
+                      "descripcion",
+                      e.target.value
+                    )
                   }
                   className="w-full rounded-xl border border-[#D8BA98] px-4 py-3"
                 />
               </div>
+
+              {/* MENSAJE */}
 
               {mensajePqr && (
                 <div className="rounded-xl border border-[#D8BA98] bg-white p-3 text-sm">
                   {mensajePqr}
                 </div>
               )}
+
+              {/* BOTONES */}
 
               <div className="flex justify-end gap-3">
                 <button
@@ -700,7 +723,9 @@ function ClientePQR() {
                   disabled={enviandoPqr}
                   className="rounded-xl bg-[#7F0303] px-5 py-3 font-bold text-white"
                 >
-                  {enviandoPqr ? "Enviando..." : "Enviar PQR"}
+                  {enviandoPqr
+                    ? "Enviando..."
+                    : "Enviar PQR"}
                 </button>
               </div>
             </form>
@@ -710,5 +735,5 @@ function ClientePQR() {
     </EstructuraPanel>
   );
 }
-}
+
 export default ClientePQR;
