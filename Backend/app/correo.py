@@ -19,7 +19,7 @@ print(
 )
 print("MAIL_FROM:", os.getenv("MAIL_FROM"))
 print("MAIL_SERVER:", "smtp.gmail.com")
-print("MAIL_PORT:", 587)
+print("MAIL_PORT:", 465)
 print("====================================")
 
 
