@@ -13,6 +13,7 @@ function RecuperarContrasena({ correoInicial, onBack }) {
   const [correo, setCorreo] = useState(correoInicial || "");
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
+  const [cargando, setCargando] = useState(false);
 
   // ==========================================================
   // VALIDAR CORREO
@@ -26,7 +27,7 @@ function RecuperarContrasena({ correoInicial, onBack }) {
     return false;
   }
 
-  if (!regex.test(valor)) {
+  if (!regex.test(valor.trim())) {
     setError("Ingresa un correo válido.");
     return false;
   }
@@ -56,16 +57,27 @@ function RecuperarContrasena({ correoInicial, onBack }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (cargando) {
+      return;
+    }
+
     if (!validarCorreo(correo)) {
       return;
     }
 
     setError("");
     setMensaje("");
+    setCargando(true);
 
     try {
+      const apiUrl = import.meta.env.VITE_API_URL;
+
+      if (!apiUrl) {
+        throw new Error("La URL de la API no está configurada.");
+      }
+
       const respuesta = await fetch(
-        `${import.meta.env.VITE_API_URL}/auth/recuperar`,
+        `${apiUrl}/auth/recuperar`,
         {
           method: "POST",
           headers: {
@@ -77,12 +89,13 @@ function RecuperarContrasena({ correoInicial, onBack }) {
         }
       );
 
-      const datos = await respuesta.json();
+      let datos = {};
 
-      console.log("=================================");
-      console.log("RESPUESTA RECUPERACIÓN");
-      console.log(datos);
-      console.log("=================================");
+      try {
+        datos = await respuesta.json();
+      } catch {
+        datos = {};
+      }
 
       if (!respuesta.ok) {
         setError(
@@ -93,25 +106,24 @@ function RecuperarContrasena({ correoInicial, onBack }) {
         return;
       }
 
-      setMensaje(
-        datos.message ||
-        `Hemos enviado instrucciones de recuperación a ${correo}`
+      setMensaje(datos.message ||
+        `Si ${correo} está registrado, recibirás instrucciones para recuperar tu contraseña.`
       );
     } catch (error) {
       console.error("Error en recuperación:", error);
 
       setError(
-        "No se pudo conectar con el servidor. Verifica que el backend esté ejecutándose."
+        error.message === "La URL de la API no está configurada."
+          ? error.message
+          : "No se pudo conectar con el servidor. Verifica que el backend esté ejecutándose."
       );
+    } finally {
+      setCargando(false);
     }
   };
   // ==========================================================
   // VOLVER AL LOGIN
   // ==========================================================
-
-  const volverLogin = () => {
-    navigate("/login");
-  };
 
   // ==========================================================
   // RENDER
@@ -337,7 +349,7 @@ function RecuperarContrasena({ correoInicial, onBack }) {
 
           <button
             type="button"
-            onClick={() => navigate("/")}
+            onClick={onBack || (() => navigate("/login"))}
             className="
     mb-8
     self-start
@@ -351,7 +363,7 @@ function RecuperarContrasena({ correoInicial, onBack }) {
     dark:hover:text-[#D4AF37]
   "
           >
-            ← Volver al inicio
+            ← Volver al inicio de sesión
           </button>
 
           <div className="max-w-xl">
@@ -460,6 +472,8 @@ function RecuperarContrasena({ correoInicial, onBack }) {
 
                   onChange={handleChange}
 
+                  disabled={cargando}
+
                   placeholder="correo@ejemplo.com"
 
                   required
@@ -514,6 +528,7 @@ function RecuperarContrasena({ correoInicial, onBack }) {
                 {error && (
 
                   <p
+                    role="alert"
                     className="
                       mt-3
 
@@ -541,6 +556,7 @@ function RecuperarContrasena({ correoInicial, onBack }) {
               {mensaje && (
 
                 <div
+                  role="status"
                   className="
                     rounded-2xl
 
@@ -570,6 +586,7 @@ function RecuperarContrasena({ correoInicial, onBack }) {
 
               <button
                 type="submit"
+                disabled={cargando}
 
                 className="
                   w-full
@@ -594,6 +611,9 @@ function RecuperarContrasena({ correoInicial, onBack }) {
 
                   hover:-translate-y-1
 
+                  disabled:cursor-not-allowed
+                  disabled:opacity-60
+
                   hover:bg-[#52070A]
 
                   hover:shadow-xl
@@ -609,7 +629,7 @@ function RecuperarContrasena({ correoInicial, onBack }) {
                   dark:hover:bg-[#F0CC55]
                 "
               >
-                Recuperar contraseña
+                {cargando ? "Enviando solicitud..." : "Recuperar contraseña"}
               </button>
 
             </form>

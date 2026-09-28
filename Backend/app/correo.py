@@ -1,38 +1,23 @@
 import os
 import html
+import requests
 from dotenv import load_dotenv
-from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
 
 load_dotenv()
 
 
 # ============================================================
-# CONFIGURACIÓN DEL CORREO
+# CONFIGURACIÓN DE BREVO
 # ============================================================
 
-print("====================================")
-print("CONFIGURACIÓN DEL CORREO")
-print("MAIL_USERNAME:", os.getenv("MAIL_USERNAME"))
-print(
-    "MAIL_PASSWORD configurada:",
-    bool(os.getenv("MAIL_PASSWORD"))
-)
-print("MAIL_FROM:", os.getenv("MAIL_FROM"))
-print("MAIL_SERVER:", "smtp.gmail.com")
-print("MAIL_PORT:", 465)
-print("====================================")
+BREVO_API_KEY = os.getenv("BREVO_API_KEY")
+MAIL_FROM = os.getenv("MAIL_FROM")
 
-
-conf = ConnectionConfig(
-    MAIL_USERNAME=os.getenv("MAIL_USERNAME"),
-    MAIL_PASSWORD=os.getenv("MAIL_PASSWORD"),
-    MAIL_FROM=os.getenv("MAIL_FROM"),
-    MAIL_PORT=465,
-    MAIL_SERVER="smtp.gmail.com",
-    MAIL_STARTTLS=False,
-    MAIL_SSL_TLS=True,
-    USE_CREDENTIALS=True,
-)
+print("====================================")
+print("CONFIGURACIÓN DEL CORREO - BREVO")
+print("MAIL_FROM:", MAIL_FROM)
+print("BREVO_API_KEY configurada:", bool(BREVO_API_KEY))
+print("====================================")
 
 
 # ============================================================
@@ -43,9 +28,24 @@ async def enviar_correo_recuperacion(
     correo_destino: str,
     enlace: str
 ):
+
     print("====================================")
     print("PREPARANDO CORREO DE RECUPERACIÓN")
     print("DESTINO:", correo_destino)
+
+    # --------------------------------------------------------
+    # VERIFICAR CONFIGURACIÓN
+    # --------------------------------------------------------
+
+    if not BREVO_API_KEY:
+        raise RuntimeError(
+            "No se encontró BREVO_API_KEY en las variables de entorno."
+        )
+
+    if not MAIL_FROM:
+        raise RuntimeError(
+            "No se encontró MAIL_FROM en las variables de entorno."
+        )
 
     # --------------------------------------------------------
     # PROTEGER EL ENLACE PARA HTML
@@ -95,7 +95,9 @@ async def enviar_correo_recuperacion(
         padding: 40px 15px;
     "
 >
+
     <tr>
+
         <td align="center">
 
             <table
@@ -112,11 +114,10 @@ async def enviar_correo_recuperacion(
                 "
             >
 
-                <!-- ================================================= -->
                 <!-- ENCABEZADO -->
-                <!-- ================================================= -->
 
                 <tr>
+
                     <td
                         align="center"
                         style="
@@ -132,7 +133,9 @@ async def enviar_correo_recuperacion(
                             color: #FFFFFF;
                             margin-bottom: 10px;
                         ">
+
                             MUGI STORE
+
                         </div>
 
                         <div style="
@@ -141,6 +144,7 @@ async def enviar_correo_recuperacion(
                             background-color: #D4AF37;
                             margin: 0 auto 15px auto;
                         ">
+
                         </div>
 
                         <div style="
@@ -148,18 +152,20 @@ async def enviar_correo_recuperacion(
                             color: #F8F3EA;
                             letter-spacing: 1px;
                         ">
+
                             Tu tienda, tu estilo
+
                         </div>
 
                     </td>
+
                 </tr>
 
 
-                <!-- ================================================= -->
                 <!-- CONTENIDO -->
-                <!-- ================================================= -->
 
                 <tr>
+
                     <td style="padding: 40px 35px;">
 
                         <h1 style="
@@ -169,7 +175,9 @@ async def enviar_correo_recuperacion(
                             font-size: 28px;
                             color: #7F0303;
                         ">
+
                             Recupera tu acceso
+
                         </h1>
 
 
@@ -179,7 +187,9 @@ async def enviar_correo_recuperacion(
                             line-height: 1.7;
                             color: #765E52;
                         ">
+
                             Hola,
+
                         </p>
 
 
@@ -189,11 +199,14 @@ async def enviar_correo_recuperacion(
                             line-height: 1.7;
                             color: #765E52;
                         ">
+
                             Recibimos una solicitud para recuperar
                             la contraseña de tu cuenta de
+
                             <strong style="color: #7F0303;">
                                 MUGI STORE
                             </strong>.
+
                         </p>
 
 
@@ -203,14 +216,14 @@ async def enviar_correo_recuperacion(
                             line-height: 1.7;
                             color: #765E52;
                         ">
+
                             Para crear una nueva contraseña,
                             haz clic en el siguiente botón:
+
                         </p>
 
 
-                        <!-- ================================================= -->
                         <!-- BOTÓN -->
-                        <!-- ================================================= -->
 
                         <table
                             width="100%"
@@ -218,6 +231,7 @@ async def enviar_correo_recuperacion(
                             cellspacing="0"
                             border="0"
                         >
+
                             <tr>
 
                                 <td align="center">
@@ -236,18 +250,19 @@ async def enviar_correo_recuperacion(
                                             border: 2px solid #D4AF37;
                                         "
                                     >
+
                                         Restablecer contraseña
+
                                     </a>
 
                                 </td>
 
                             </tr>
+
                         </table>
 
 
-                        <!-- ================================================= -->
                         <!-- ENLACE -->
-                        <!-- ================================================= -->
 
                         <p style="
                             margin: 30px 0 10px 0;
@@ -256,8 +271,10 @@ async def enviar_correo_recuperacion(
                             color: #765E52;
                             text-align: center;
                         ">
+
                             Si el botón no funciona, puedes copiar
                             y pegar este enlace en tu navegador:
+
                         </p>
 
 
@@ -272,13 +289,13 @@ async def enviar_correo_recuperacion(
                             word-break: break-all;
                             color: #7F0303;
                         ">
+
                             {enlace_seguro}
+
                         </p>
 
 
-                        <!-- ================================================= -->
                         <!-- AVISO -->
-                        <!-- ================================================= -->
 
                         <table
                             width="100%"
@@ -287,6 +304,7 @@ async def enviar_correo_recuperacion(
                             border="0"
                             style="margin-top: 30px;"
                         >
+
                             <tr>
 
                                 <td style="
@@ -306,7 +324,9 @@ async def enviar_correo_recuperacion(
                                         <strong style="
                                             color: #7F0303;
                                         ">
+
                                             Importante:
+
                                         </strong>
 
                                         este enlace es temporal y
@@ -318,12 +338,11 @@ async def enviar_correo_recuperacion(
                                 </td>
 
                             </tr>
+
                         </table>
 
 
-                        <!-- ================================================= -->
                         <!-- SEGURIDAD -->
-                        <!-- ================================================= -->
 
                         <p style="
                             margin: 30px 0 0 0;
@@ -331,9 +350,11 @@ async def enviar_correo_recuperacion(
                             line-height: 1.7;
                             color: #765E52;
                         ">
+
                             Si tú no solicitaste este cambio de
                             contraseña, puedes ignorar este correo.
                             Tu cuenta permanecerá segura.
+
                         </p>
 
 
@@ -343,20 +364,21 @@ async def enviar_correo_recuperacion(
                             line-height: 1.6;
                             color: #765E52;
                         ">
+
                             Saludos,<br>
 
                             <strong style="color: #7F0303;">
                                 Equipo MUGI STORE
                             </strong>
+
                         </p>
 
                     </td>
+
                 </tr>
 
 
-                <!-- ================================================= -->
                 <!-- PIE -->
-                <!-- ================================================= -->
 
                 <tr>
 
@@ -375,7 +397,9 @@ async def enviar_correo_recuperacion(
                             letter-spacing: 2px;
                             margin-bottom: 8px;
                         ">
+
                             MUGI STORE
+
                         </div>
 
 
@@ -383,7 +407,9 @@ async def enviar_correo_recuperacion(
                             color: #F8F3EA;
                             font-size: 12px;
                         ">
+
                             Gracias por confiar en nosotros.
+
                         </div>
 
                     </td>
@@ -393,53 +419,80 @@ async def enviar_correo_recuperacion(
             </table>
 
         </td>
+
     </tr>
+
 </table>
 
 </body>
 </html>
 """
 
-
     # ========================================================
-    # CREAR MENSAJE
-    # ========================================================
-
-    mensaje = MessageSchema(
-        subject="Recuperación de contraseña - MUGI STORE",
-        recipients=[correo_destino],
-        body=cuerpo_html,
-        subtype="html",
-    )
-
-
-    # ========================================================
-    # FASTMAIL
+    # DATOS PARA BREVO
     # ========================================================
 
-    print("CREANDO CONEXIÓN CON GMAIL...")
+    datos = {
+        "sender": {
+            "name": "MUGI STORE",
+            "email": MAIL_FROM
+        },
 
-    fm = FastMail(conf)
+        "to": [
+            {
+                "email": correo_destino
+            }
+        ],
 
-    print("INTENTANDO ENVIAR CORREO...")
-    print("DESTINO:", correo_destino)
+        "subject": "Recuperación de contraseña - MUGI STORE",
 
+        "htmlContent": cuerpo_html
+    }
 
     # ========================================================
-    # ENVIAR CORREO
+    # ENVIAR CON BREVO
     # ========================================================
+
+    print("ENVIANDO CORREO MEDIANTE BREVO...")
 
     try:
 
-        await fm.send_message(mensaje)
+        respuesta = requests.post(
+            "https://api.brevo.com/v3/smtp/email",
+
+            headers={
+                "accept": "application/json",
+                "api-key": BREVO_API_KEY,
+                "content-type": "application/json"
+            },
+
+            json=datos,
+
+            timeout=30
+        )
+
+        print("RESPUESTA BREVO:", respuesta.status_code)
+
+        if not respuesta.ok:
+
+            print("ERROR BREVO:", respuesta.text)
+
+            raise RuntimeError(
+                f"Brevo rechazó el envío: "
+                f"{respuesta.status_code} - "
+                f"{respuesta.text}"
+            )
+
+        resultado = respuesta.json()
 
         print("CORREO ENVIADO CORRECTAMENTE")
+        print("MESSAGE ID:", resultado.get("messageId"))
         print("====================================")
 
     except Exception as error:
 
         print("====================================")
-        print("ERROR ENVIANDO CORREO")
+        print("ERROR ENVIANDO CORREO CON BREVO")
         print("TIPO DE ERROR:", type(error).__name__)
         print("DETALLE:", repr(error))
         print("====================================")
