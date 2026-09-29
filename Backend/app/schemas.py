@@ -452,17 +452,46 @@ class VentaCreate(BaseModel):
 # ==========================================================
 
 class RecuperarContrasenaRequest(BaseModel):
+
     email: EmailStr
 
 
+class VerificarCodigoRecuperacionRequest(BaseModel):
+
+    token: str
+
+    codigo: str = Field(
+        min_length=6,
+        max_length=6
+    )
+
+    @field_validator("codigo")
+    @classmethod
+    def validar_codigo(cls, valor):
+
+        valor = valor.strip()
+
+        if not valor.isdigit():
+            raise ValueError(
+                "El código debe contener únicamente números."
+            )
+
+        if len(valor) != 6:
+            raise ValueError(
+                "El código debe tener exactamente 6 dígitos."
+            )
+
+        return valor
+
+
 class RestablecerContrasenaRequest(BaseModel):
+
     token: str
 
     nueva_password: str = Field(
         min_length=8,
         max_length=72
     )
-
 
 # ==========================================================
 # PQR

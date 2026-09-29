@@ -1,5 +1,6 @@
 import os
 import html
+
 import requests
 from dotenv import load_dotenv
 
@@ -21,14 +22,13 @@ print("====================================")
 
 
 # ============================================================
-# ENVIAR CORREO DE RECUPERACIÓN
+# ENVIAR CÓDIGO DE RECUPERACIÓN
 # ============================================================
 
 async def enviar_correo_recuperacion(
     correo_destino: str,
-    enlace: str
+    codigo: str
 ):
-
     print("====================================")
     print("PREPARANDO CORREO DE RECUPERACIÓN")
     print("DESTINO:", correo_destino)
@@ -48,11 +48,11 @@ async def enviar_correo_recuperacion(
         )
 
     # --------------------------------------------------------
-    # PROTEGER EL ENLACE PARA HTML
+    # PROTEGER EL CÓDIGO PARA HTML
     # --------------------------------------------------------
 
-    enlace_seguro = html.escape(
-        enlace,
+    codigo_seguro = html.escape(
+        str(codigo),
         quote=True
     )
 
@@ -62,9 +62,11 @@ async def enviar_correo_recuperacion(
 
     cuerpo_html = f"""
 <!DOCTYPE html>
+
 <html lang="es">
 
 <head>
+
     <meta charset="UTF-8">
 
     <meta
@@ -75,7 +77,9 @@ async def enviar_correo_recuperacion(
     <title>
         Recuperación de contraseña - MUGI STORE
     </title>
+
 </head>
+
 
 <body style="
     margin: 0;
@@ -84,6 +88,7 @@ async def enviar_correo_recuperacion(
     font-family: Arial, Helvetica, sans-serif;
     color: #52070A;
 ">
+
 
 <table
     width="100%"
@@ -100,6 +105,7 @@ async def enviar_correo_recuperacion(
 
         <td align="center">
 
+
             <table
                 width="100%"
                 cellpadding="0"
@@ -114,7 +120,10 @@ async def enviar_correo_recuperacion(
                 "
             >
 
+
+                <!-- ================================================= -->
                 <!-- ENCABEZADO -->
+                <!-- ================================================= -->
 
                 <tr>
 
@@ -138,14 +147,15 @@ async def enviar_correo_recuperacion(
 
                         </div>
 
+
                         <div style="
                             width: 70px;
                             height: 3px;
                             background-color: #D4AF37;
                             margin: 0 auto 15px auto;
                         ">
-
                         </div>
+
 
                         <div style="
                             font-size: 14px;
@@ -162,11 +172,14 @@ async def enviar_correo_recuperacion(
                 </tr>
 
 
+                <!-- ================================================= -->
                 <!-- CONTENIDO -->
+                <!-- ================================================= -->
 
                 <tr>
 
                     <td style="padding: 40px 35px;">
+
 
                         <h1 style="
                             margin: 0 0 20px 0;
@@ -202,7 +215,6 @@ async def enviar_correo_recuperacion(
 
                             Recibimos una solicitud para recuperar
                             la contraseña de tu cuenta de
-
                             <strong style="color: #7F0303;">
                                 MUGI STORE
                             </strong>.
@@ -215,15 +227,18 @@ async def enviar_correo_recuperacion(
                             font-size: 16px;
                             line-height: 1.7;
                             color: #765E52;
+                            text-align: center;
                         ">
 
-                            Para crear una nueva contraseña,
-                            haz clic en el siguiente botón:
+                            Utiliza el siguiente código para
+                            continuar con la recuperación:
 
                         </p>
 
 
-                        <!-- BOTÓN -->
+                        <!-- ================================================= -->
+                        <!-- CÓDIGO -->
+                        <!-- ================================================= -->
 
                         <table
                             width="100%"
@@ -236,24 +251,22 @@ async def enviar_correo_recuperacion(
 
                                 <td align="center">
 
-                                    <a
-                                        href="{enlace_seguro}"
-                                        style="
-                                            display: inline-block;
-                                            background-color: #7F0303;
-                                            color: #FFFFFF;
-                                            text-decoration: none;
-                                            font-size: 16px;
-                                            font-weight: bold;
-                                            padding: 15px 35px;
-                                            border-radius: 12px;
-                                            border: 2px solid #D4AF37;
-                                        "
-                                    >
+                                    <div style="
+                                        display: inline-block;
+                                        background-color: #7F0303;
+                                        color: #FFFFFF;
+                                        font-size: 36px;
+                                        font-weight: bold;
+                                        letter-spacing: 10px;
+                                        padding: 20px 30px;
+                                        border-radius: 15px;
+                                        border: 2px solid #D4AF37;
+                                        text-align: center;
+                                    ">
 
-                                        Restablecer contraseña
+                                        {codigo_seguro}
 
-                                    </a>
+                                    </div>
 
                                 </td>
 
@@ -262,40 +275,28 @@ async def enviar_correo_recuperacion(
                         </table>
 
 
-                        <!-- ENLACE -->
+                        <!-- ================================================= -->
+                        <!-- INSTRUCCIONES -->
+                        <!-- ================================================= -->
 
                         <p style="
                             margin: 30px 0 10px 0;
-                            font-size: 13px;
+                            font-size: 14px;
                             line-height: 1.6;
                             color: #765E52;
                             text-align: center;
                         ">
 
-                            Si el botón no funciona, puedes copiar
-                            y pegar este enlace en tu navegador:
+                            Regresa a MUGI STORE e introduce este
+                            código en la ventana de recuperación
+                            de contraseña.
 
                         </p>
 
 
-                        <p style="
-                            margin: 0;
-                            padding: 12px;
-                            background-color: #EFE8DF;
-                            border: 1px solid #D8BA98;
-                            border-radius: 10px;
-                            font-size: 12px;
-                            line-height: 1.5;
-                            word-break: break-all;
-                            color: #7F0303;
-                        ">
-
-                            {enlace_seguro}
-
-                        </p>
-
-
+                        <!-- ================================================= -->
                         <!-- AVISO -->
+                        <!-- ================================================= -->
 
                         <table
                             width="100%"
@@ -329,7 +330,7 @@ async def enviar_correo_recuperacion(
 
                                         </strong>
 
-                                        este enlace es temporal y
+                                        este código es temporal y
                                         dejará de funcionar después
                                         de un tiempo.
 
@@ -342,7 +343,9 @@ async def enviar_correo_recuperacion(
                         </table>
 
 
+                        <!-- ================================================= -->
                         <!-- SEGURIDAD -->
+                        <!-- ================================================= -->
 
                         <p style="
                             margin: 30px 0 0 0;
@@ -368,7 +371,9 @@ async def enviar_correo_recuperacion(
                             Saludos,<br>
 
                             <strong style="color: #7F0303;">
+
                                 Equipo MUGI STORE
+
                             </strong>
 
                         </p>
@@ -378,7 +383,9 @@ async def enviar_correo_recuperacion(
                 </tr>
 
 
+                <!-- ================================================= -->
                 <!-- PIE -->
+                <!-- ================================================= -->
 
                 <tr>
 
@@ -416,6 +423,7 @@ async def enviar_correo_recuperacion(
 
                 </tr>
 
+
             </table>
 
         </td>
@@ -424,7 +432,9 @@ async def enviar_correo_recuperacion(
 
 </table>
 
+
 </body>
+
 </html>
 """
 
@@ -444,7 +454,7 @@ async def enviar_correo_recuperacion(
             }
         ],
 
-        "subject": "Recuperación de contraseña - MUGI STORE",
+        "subject": "Código de recuperación - MUGI STORE",
 
         "htmlContent": cuerpo_html
     }
@@ -471,11 +481,17 @@ async def enviar_correo_recuperacion(
             timeout=30
         )
 
-        print("RESPUESTA BREVO:", respuesta.status_code)
+        print(
+            "RESPUESTA BREVO:",
+            respuesta.status_code
+        )
 
         if not respuesta.ok:
 
-            print("ERROR BREVO:", respuesta.text)
+            print(
+                "ERROR BREVO:",
+                respuesta.text
+            )
 
             raise RuntimeError(
                 f"Brevo rechazó el envío: "
@@ -485,16 +501,31 @@ async def enviar_correo_recuperacion(
 
         resultado = respuesta.json()
 
-        print("CORREO ENVIADO CORRECTAMENTE")
-        print("MESSAGE ID:", resultado.get("messageId"))
+        print(
+            "CORREO ENVIADO CORRECTAMENTE"
+        )
+
+        print(
+            "MESSAGE ID:",
+            resultado.get("messageId")
+        )
+
         print("====================================")
 
     except Exception as error:
 
         print("====================================")
-        print("ERROR ENVIANDO CORREO CON BREVO")
-        print("TIPO DE ERROR:", type(error).__name__)
-        print("DETALLE:", repr(error))
+        print(
+            "ERROR ENVIANDO CORREO CON BREVO"
+        )
+        print(
+            "TIPO DE ERROR:",
+            type(error).__name__
+        )
+        print(
+            "DETALLE:",
+            repr(error)
+        )
         print("====================================")
 
         raise

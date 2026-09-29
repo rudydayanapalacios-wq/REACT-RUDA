@@ -6,18 +6,23 @@ from sqlalchemy.orm import Session
 from ..auth import (
     crear_token_acceso,
     crear_token_recuperacion,
+    crear_token_restablecimiento,
     hash_password,
-    obtener_datos_token_recuperacion,
+    obtener_datos_token_restablecimiento,
+    verificar_codigo_recuperacion,
     verify_password,
 )
+
 from ..correo import enviar_correo_recuperacion
 from ..database import get_db
 from ..dependencies import obtener_usuario_actual
 from ..models import Usuario
+
 from ..schemas import (
     LoginRequest,
     LoginResponse,
     RecuperarContrasenaRequest,
+    VerificarCodigoRecuperacionRequest,
     RestablecerContrasenaRequest,
     UsuarioPerfilUpdate,
     UsuarioResponse,
@@ -33,6 +38,7 @@ router = APIRouter(
 # ==========================================================
 # LOGIN
 # ==========================================================
+
 @router.post(
     "/login",
     response_model=LoginResponse
@@ -62,6 +68,7 @@ def iniciar_sesion(
     )
 
     if not usuario:
+
         print("RESULTADO: USUARIO NO ENCONTRADO")
         print("====================================")
 
@@ -77,6 +84,7 @@ def iniciar_sesion(
     # ------------------------------------------------------
     # DIAGNÓSTICO DEL HASH
     # ------------------------------------------------------
+
     print(
         "HASH EXISTE:",
         bool(usuario.password)
@@ -90,7 +98,9 @@ def iniciar_sesion(
     # ------------------------------------------------------
     # VERIFICAR CONTRASEÑA
     # ------------------------------------------------------
+
     try:
+
         contraseña_correcta = verify_password(
             credenciales.password,
             usuario.password
@@ -116,6 +126,7 @@ def iniciar_sesion(
     # ------------------------------------------------------
     # CONTRASEÑA INCORRECTA
     # ------------------------------------------------------
+
     if not contraseña_correcta:
 
         print(
@@ -132,6 +143,7 @@ def iniciar_sesion(
     # ------------------------------------------------------
     # USUARIO INACTIVO
     # ------------------------------------------------------
+
     if not usuario.estado:
 
         print(
@@ -148,6 +160,7 @@ def iniciar_sesion(
     # ------------------------------------------------------
     # LOGIN CORRECTO
     # ------------------------------------------------------
+
     print(
         "RESULTADO: LOGIN CORRECTO"
     )
@@ -156,17 +169,20 @@ def iniciar_sesion(
 
     return {
         "success": True,
+
         "token": crear_token_acceso(
             usuario.id,
             usuario.rol_id
         ),
+
         "usuario": usuario,
     }
 
 
 # ==========================================================
-# RECUPERAR CONTRASEÑA
+# SOLICITAR RECUPERACIÓN
 # ==========================================================
+
 @router.post("/recuperar")
 async def solicitar_recuperacion(
     datos: RecuperarContrasenaRequest,
@@ -178,30 +194,39 @@ async def solicitar_recuperacion(
     print("CORREO RECIBIDO:", datos.email)
 
     # ------------------------------------------------------
+    # NORMALIZAR CORREO
+    # ------------------------------------------------------
+
+    email = datos.email.strip().lower()
+
+    # ------------------------------------------------------
     # BUSCAR USUARIO
     # ------------------------------------------------------
+
     usuario = db.query(Usuario).filter(
-        Usuario.email == datos.email
+        Usuario.email == email
     ).first()
 
     print(
         "USUARIO ENCONTRADO:",
-        usuario
+        usuario is not None
     )
 
     mensaje = (
         "Si el correo está registrado, "
-        "recibirás un enlace para recuperar tu contraseña."
+        "recibirás un código para recuperar "
+        "tu contraseña."
     )
 
     # ------------------------------------------------------
     # USUARIO NO ENCONTRADO O INACTIVO
     # ------------------------------------------------------
+
     if not usuario or not usuario.estado:
 
         print(
-            "NO SE ENCONTRO EL USUARIO "
-            "O ESTA INACTIVO"
+            "NO SE ENCONTRÓ EL USUARIO "
+            "O ESTÁ INACTIVO"
         )
 
         print("====================================")
@@ -214,20 +239,33 @@ async def solicitar_recuperacion(
     # ------------------------------------------------------
     # USUARIO ENCONTRADO
     # ------------------------------------------------------
+
     print("USUARIO CORRECTO")
     print("ID DEL USUARIO:", usuario.id)
 
     # ------------------------------------------------------
-    # CREAR TOKEN DE RECUPERACIÓN
+    # GENERAR CÓDIGO
     # ------------------------------------------------------
+
+    from ..auth import generar_codigo_recuperacion
+
+    codigo = generar_codigo_recuperacion()
+
+    print("CÓDIGO GENERADO CORRECTAMENTE")
+
+    # ------------------------------------------------------
+    # CREAR TOKEN TEMPORAL
+    # ------------------------------------------------------
+
     try:
 
         token = crear_token_recuperacion(
-            usuario.id
+            usuario.id,
+            codigo
         )
 
         print(
-            "TOKEN GENERADO CORRECTAMENTE"
+            "TOKEN TEMPORAL DE RECUPERACIÓN GENERADO"
         )
 
     except Exception as error:
@@ -241,64 +279,27 @@ async def solicitar_recuperacion(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=(
                 "No fue posible generar "
-                "el token de recuperación."
+                "el código de recuperación."
             )
         )
 
     # ------------------------------------------------------
-    # TOKEN SOLO PARA PRUEBAS LOCALES
+    # ENVÍO DEL CORREO
     # ------------------------------------------------------
-    print("====================================")
-    print("TOKEN DE RECUPERACIÓN:")
-    print(token)
-    print("====================================")
 
-    # ------------------------------------------------------
-    # OBTENER URL DEL FRONTEND
-    # ------------------------------------------------------
-    frontend_url = os.getenv(
-        "FRONTEND_URL",
-        "http://localhost:5173"
-    ).rstrip("/")
-
-    # ------------------------------------------------------
-    # CREAR ENLACE
-    # ------------------------------------------------------
-    enlace = (
-        f"{frontend_url}"
-        f"/restablecer-contrasena"
-        f"?token={token}"
-    )
-
-    print(
-        "ENLACE DE RECUPERACIÓN:"
-    )
-
-    print(enlace)
-
-    print("====================================")
-
-    # ------------------------------------------------------
-    # ENVIAR CORREO
-    # ------------------------------------------------------
     try:
 
-        print(
-            "INICIANDO ENVÍO DEL CORREO"
-        )
-
-        print(
-            "DESTINO:",
-            datos.email
-        )
+        print("====================================")
+        print("INICIANDO ENVÍO DEL CORREO")
+        print("DESTINO:", email)
 
         await enviar_correo_recuperacion(
-            datos.email,
-            enlace
+            email,
+            codigo
         )
 
         print(
-            "CORREO DE RECUPERACIÓN ENVIADO"
+            "CORREO CON CÓDIGO ENVIADO CORRECTAMENTE"
         )
 
     except Exception as error:
@@ -333,6 +334,7 @@ async def solicitar_recuperacion(
     # ------------------------------------------------------
     # FINALIZAR
     # ------------------------------------------------------
+
     print(
         "SOLICITUD DE RECUPERACIÓN TERMINADA"
     )
@@ -342,13 +344,122 @@ async def solicitar_recuperacion(
     return {
         "success": True,
         "message": mensaje,
+
+        # Este token NO contiene la contraseña.
+        # React lo conservará temporalmente para
+        # verificar el código.
         "token": token
+    }
+
+
+# ==========================================================
+# VERIFICAR CÓDIGO
+# ==========================================================
+
+@router.post("/verificar-codigo")
+def verificar_codigo(
+    datos: VerificarCodigoRecuperacionRequest
+):
+
+    print("====================================")
+    print("VERIFICACIÓN DE CÓDIGO")
+    print("CÓDIGO RECIBIDO:", datos.codigo)
+
+    # ------------------------------------------------------
+    # VERIFICAR TOKEN Y CÓDIGO
+    # ------------------------------------------------------
+
+    try:
+
+        datos_token = verificar_codigo_recuperacion(
+            datos.token,
+            datos.codigo
+        )
+
+    except ValueError as error:
+
+        print(
+            "ERROR VERIFICANDO CÓDIGO:",
+            str(error)
+        )
+
+        print("====================================")
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error)
+        )
+
+    # ------------------------------------------------------
+    # OBTENER USUARIO
+    # ------------------------------------------------------
+
+    try:
+
+        usuario_id = int(
+            datos_token.get("sub")
+        )
+
+    except (TypeError, ValueError):
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token de recuperación inválido"
+        )
+
+    print(
+        "CÓDIGO VERIFICADO CORRECTAMENTE"
+    )
+
+    print(
+        "ID USUARIO:",
+        usuario_id
+    )
+
+    # ------------------------------------------------------
+    # CREAR TOKEN DE RESTABLECIMIENTO
+    # ------------------------------------------------------
+
+    try:
+
+        token_restablecimiento = (
+            crear_token_restablecimiento(
+                usuario_id
+            )
+        )
+
+    except Exception as error:
+
+        print(
+            "ERROR CREANDO TOKEN DE RESTABLECIMIENTO:",
+            repr(error)
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=(
+                "No fue posible continuar "
+                "con el restablecimiento."
+            )
+        )
+
+    print("====================================")
+
+    return {
+        "success": True,
+
+        "message": (
+            "Código verificado correctamente."
+        ),
+
+        "token": token_restablecimiento
     }
 
 
 # ==========================================================
 # RESTABLECER CONTRASEÑA
 # ==========================================================
+
 @router.post("/restablecer")
 def restablecer_contrasena(
     datos: RestablecerContrasenaRequest,
@@ -356,12 +467,13 @@ def restablecer_contrasena(
 ):
 
     # ------------------------------------------------------
-    # VALIDAR TOKEN
+    # VALIDAR TOKEN DE RESTABLECIMIENTO
     # ------------------------------------------------------
+
     try:
 
         datos_token = (
-            obtener_datos_token_recuperacion(
+            obtener_datos_token_restablecimiento(
                 datos.token
             )
         )
@@ -376,6 +488,7 @@ def restablecer_contrasena(
     # ------------------------------------------------------
     # OBTENER ID DEL USUARIO
     # ------------------------------------------------------
+
     try:
 
         usuario_id = int(
@@ -386,12 +499,13 @@ def restablecer_contrasena(
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Token de recuperación inválido"
+            detail="Token de restablecimiento inválido"
         )
 
     # ------------------------------------------------------
     # BUSCAR USUARIO
     # ------------------------------------------------------
+
     usuario = db.query(Usuario).filter(
         Usuario.id == usuario_id
     ).first()
@@ -406,6 +520,7 @@ def restablecer_contrasena(
     # ------------------------------------------------------
     # ACTUALIZAR CONTRASEÑA
     # ------------------------------------------------------
+
     nueva_password_hash = hash_password(
         datos.nueva_password
     )
@@ -429,17 +544,21 @@ def restablecer_contrasena(
     usuario.password = nueva_password_hash
 
     db.commit()
+
     db.refresh(usuario)
 
     return {
         "success": True,
-        "message": "Contraseña actualizada correctamente.",
+        "message": (
+            "Contraseña actualizada correctamente."
+        ),
     }
 
 
 # ==========================================================
 # OBTENER PERFIL ACTUAL
 # ==========================================================
+
 @router.get(
     "/me",
     response_model=UsuarioResponse
@@ -456,6 +575,7 @@ def obtener_perfil_actual(
 # ==========================================================
 # ACTUALIZAR PERFIL
 # ==========================================================
+
 @router.put(
     "/me",
     response_model=UsuarioResponse
@@ -471,6 +591,7 @@ def actualizar_perfil(
     # ------------------------------------------------------
     # COMPROBAR CORREO
     # ------------------------------------------------------
+
     otro_usuario = db.query(Usuario).filter(
         Usuario.email == datos.email,
         Usuario.id != usuario.id
@@ -486,6 +607,7 @@ def actualizar_perfil(
     # ------------------------------------------------------
     # OBTENER CAMPOS
     # ------------------------------------------------------
+
     valores = datos.model_dump(
         exclude_unset=True
     )
@@ -493,6 +615,7 @@ def actualizar_perfil(
     # ------------------------------------------------------
     # ENCRIPTAR CONTRASEÑA
     # ------------------------------------------------------
+
     if valores.get("password"):
 
         valores["password"] = hash_password(
@@ -509,6 +632,7 @@ def actualizar_perfil(
     # ------------------------------------------------------
     # ACTUALIZAR USUARIO
     # ------------------------------------------------------
+
     for campo, valor in valores.items():
 
         setattr(
@@ -518,6 +642,7 @@ def actualizar_perfil(
         )
 
     db.commit()
+
     db.refresh(usuario)
 
     return usuario
