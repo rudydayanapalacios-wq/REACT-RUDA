@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-
+import { useNavigate } from "react-router-dom";
 import {
   X,
   Send,
@@ -11,6 +11,7 @@ import {
   Move,
   Maximize2,
 } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -22,6 +23,9 @@ const SUGERENCIAS = [
 ];
 
 function Chatbot() {
+  const navigate = useNavigate();
+  const { token, usuario } = useAuth();
+
   const [abierto, setAbierto] = useState(false);
 
   const [mensajes, setMensajes] = useState([
@@ -78,6 +82,7 @@ function Chatbot() {
 
   // Referencias para mover
   const arrastrandoRef = useRef(false);
+
   const inicioArrastreRef = useRef({
     mouseX: 0,
     mouseY: 0,
@@ -87,6 +92,7 @@ function Chatbot() {
 
   // Referencias para cambiar tamaño
   const redimensionandoRef = useRef(false);
+
   const inicioResizeRef = useRef({
     mouseX: 0,
     mouseY: 0,
@@ -320,6 +326,28 @@ function Chatbot() {
   };
 
   // ==========================================================
+  // ABRIR CHATBOT
+  // ==========================================================
+
+  const abrirChatbot = () => {
+    // Si no hay sesión, enviar al login
+    if (!token || !usuario) {
+      navigate("/login");
+      return;
+    }
+
+    const nuevoTamano = obtenerTamanoInicial();
+
+    setTamano({
+      ancho: nuevoTamano.ancho,
+      alto: nuevoTamano.alto,
+    });
+
+    setPosicion(calcularPosicionInicial());
+    setAbierto(true);
+  };
+
+  // ==========================================================
   // ENVIAR MENSAJE
   // ==========================================================
 
@@ -327,6 +355,14 @@ function Chatbot() {
     const texto = textoSinFormato.trim();
 
     if (!texto || cargando) {
+      return;
+    }
+
+    // Seguridad adicional:
+    // si la sesión desapareció mientras el chatbot estaba abierto
+    if (!token || !usuario) {
+      setAbierto(false);
+      navigate("/login");
       return;
     }
 
@@ -351,12 +387,16 @@ function Chatbot() {
     try {
       const response = await fetch(`${API_URL}/chatbot/`, {
         method: "POST",
+
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
+
         body: JSON.stringify({
           mensaje: texto,
         }),
+
         signal: controller.signal,
       });
 
@@ -484,17 +524,7 @@ function Chatbot() {
       {!abierto && (
         <button
           type="button"
-          onClick={() => {
-            const nuevoTamano = obtenerTamanoInicial();
-
-            setTamano({
-              ancho: nuevoTamano.ancho,
-              alto: nuevoTamano.alto,
-            });
-
-            setPosicion(calcularPosicionInicial());
-            setAbierto(true);
-          }}
+          onClick={abrirChatbot}
           aria-label="Abrir asistente MUGI IA"
           style={{
             position: "fixed",

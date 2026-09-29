@@ -2,15 +2,131 @@
 // PÁGINA CONTACTO - MUGI STORE
 // ============================================================
 
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import instagram from "../assets/icons/instagram.png";
 import whatsapp from "../assets/icons/whatsaap.png";
 import facebook from "../assets/icons/facebook.png";
+
+import { useAuth } from "../context/AuthContext";
 
 // ============================================================
 // COMPONENTE CONTACTO
 // ============================================================
 
 function Contacto() {
+  const navigate = useNavigate();
+  const { usuario, token } = useAuth();
+
+  const API_URL = import.meta.env.VITE_API_URL;
+
+  // ==========================================================
+  // ESTADOS PQR
+  // ==========================================================
+
+  const [tipo, setTipo] = useState("Queja");
+  const [asunto, setAsunto] = useState("");
+  const [descripcion, setDescripcion] = useState("");
+
+  const [mensaje, setMensaje] = useState("");
+  const [error, setError] = useState("");
+  const [enviando, setEnviando] = useState(false);
+
+  // ==========================================================
+  // ENVIAR PQR
+  // ==========================================================
+
+  const enviarPqr = async (e) => {
+    e.preventDefault();
+
+    // ========================================================
+    // VERIFICAR SESIÓN
+    // ========================================================
+
+    if (!token || !usuario) {
+      navigate("/login");
+      return;
+    }
+
+    // ========================================================
+    // VALIDAR CAMPOS
+    // ========================================================
+
+    if (
+      !tipo.trim() ||
+      !asunto.trim() ||
+      !descripcion.trim()
+    ) {
+      setError(
+        "Completa todos los campos antes de enviar la PQR."
+      );
+      setMensaje("");
+      return;
+    }
+
+    try {
+      setEnviando(true);
+      setError("");
+      setMensaje("");
+
+      // ======================================================
+      // ENVIAR PQR AL BACKEND
+      // ======================================================
+
+      const respuesta = await fetch(`${API_URL}/pqr/`, {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+
+        body: JSON.stringify({
+          tipo: tipo.trim(),
+          asunto: asunto.trim(),
+          descripcion: descripcion.trim(),
+        }),
+      });
+
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok) {
+        throw new Error(
+          datos.detail || "No se pudo enviar la PQR."
+        );
+      }
+
+      // ======================================================
+      // ÉXITO
+      // ======================================================
+
+      setMensaje(
+        "Tu PQR fue enviada correctamente. El equipo de MUGI la revisará."
+      );
+
+      setError("");
+
+      setTipo("Queja");
+      setAsunto("");
+      setDescripcion("");
+    } catch (error) {
+      console.error("Error enviando PQR:", error);
+
+      setError(
+        error.message || "No se pudo enviar la PQR."
+      );
+
+      setMensaje("");
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  // ============================================================
+  // RETURN
+  // ============================================================
+
   return (
     <main
       className="
@@ -19,7 +135,6 @@ function Contacto() {
         text-[#52070A]
         transition-colors
         duration-500
-
         dark:bg-[#160304]
         dark:text-[#F8F3EA]
       "
@@ -142,9 +257,7 @@ function Contacto() {
           </p>
 
         </div>
-
       </section>
-
 
       {/* ======================================================
           2. FORMULARIO + INFORMACIÓN
@@ -169,7 +282,7 @@ function Contacto() {
         >
 
           {/* ==================================================
-              FORMULARIO
+              FORMULARIO PQR
           ================================================== */}
 
           <div
@@ -182,7 +295,6 @@ function Contacto() {
               shadow-xl
               lg:col-span-3
               md:p-10
-
               dark:border-[#D4AF37]/20
               dark:bg-[#2A080A]
             "
@@ -197,7 +309,7 @@ function Contacto() {
                 text-[#D4AF37]
               "
             >
-              Envíanos un mensaje
+              Atención al cliente
             </span>
 
             <h2
@@ -210,7 +322,7 @@ function Contacto() {
                 dark:text-[#F8F3EA]
               "
             >
-              Habla con nuestra tripulación
+              Envía tu PQR
             </h2>
 
             <p
@@ -222,119 +334,49 @@ function Contacto() {
                 dark:text-[#F8F3EA]/60
               "
             >
-              Completa el formulario y cuéntanos cómo podemos
-              ayudarte.
+              Cuéntanos qué necesitas. Tu solicitud será enviada
+              directamente al equipo de MUGI STORE.
             </p>
 
+            {/* ==================================================
+                AVISO DE SESIÓN
+            ================================================== */}
 
-            {/* FORMULARIO */}
-
-            <form className="mt-8 space-y-6">
-
-              {/* NOMBRE + APELLIDO */}
-
-              <div className="grid gap-6 md:grid-cols-2">
-
-                <div>
-
-                  <label
-                    htmlFor="nombre"
-                    className="
-                      mb-2
-                      block
-                      text-sm
-                      font-semibold
-                      text-[#52070A]
-                      dark:text-[#F8F3EA]
-                    "
-                  >
-                    Nombre
-                  </label>
-
-                  <input
-                    id="nombre"
-                    type="text"
-                    placeholder="Tu nombre"
-                    className="
-                      w-full
-                      rounded-2xl
-                      border
-                      border-[#D8BA98]
-                      bg-white
-                      px-5
-                      py-3
-                      text-[#52070A]
-                      outline-none
-                      transition
-                      placeholder:text-[#52070A]/35
-                      focus:border-[#D4AF37]
-                      focus:ring-2
-                      focus:ring-[#D4AF37]/20
-
-                      dark:border-[#D4AF37]/20
-                      dark:bg-[#160304]
-                      dark:text-[#F8F3EA]
-                      dark:placeholder:text-[#F8F3EA]/30
-                    "
-                  />
-
-                </div>
-
-
-                <div>
-
-                  <label
-                    htmlFor="apellido"
-                    className="
-                      mb-2
-                      block
-                      text-sm
-                      font-semibold
-                      text-[#52070A]
-                      dark:text-[#F8F3EA]
-                    "
-                  >
-                    Apellido
-                  </label>
-
-                  <input
-                    id="apellido"
-                    type="text"
-                    placeholder="Tu apellido"
-                    className="
-                      w-full
-                      rounded-2xl
-                      border
-                      border-[#D8BA98]
-                      bg-white
-                      px-5
-                      py-3
-                      text-[#52070A]
-                      outline-none
-                      transition
-                      placeholder:text-[#52070A]/35
-                      focus:border-[#D4AF37]
-                      focus:ring-2
-                      focus:ring-[#D4AF37]/20
-
-                      dark:border-[#D4AF37]/20
-                      dark:bg-[#160304]
-                      dark:text-[#F8F3EA]
-                      dark:placeholder:text-[#F8F3EA]/30
-                    "
-                  />
-
-                </div>
-
+            {!token && (
+              <div
+                className="
+                  mt-6
+                  rounded-2xl
+                  border
+                  border-[#D4AF37]/30
+                  bg-[#D4AF37]/10
+                  p-4
+                  text-sm
+                  leading-relaxed
+                  text-[#52070A]
+                  dark:text-[#F8F3EA]
+                "
+              >
+                <strong>Necesitas iniciar sesión</strong> para
+                enviar una PQR. Puedes consultar el formulario,
+                pero al enviarlo serás dirigido al inicio de sesión.
               </div>
+            )}
 
+            {/* ==================================================
+                FORMULARIO
+            ================================================== */}
 
-              {/* EMAIL */}
+            <form
+              onSubmit={enviarPqr}
+              className="mt-8 space-y-6"
+            >
+
+              {/* TIPO */}
 
               <div>
-
                 <label
-                  htmlFor="email"
+                  htmlFor="tipo"
                   className="
                     mb-2
                     block
@@ -344,107 +386,13 @@ function Contacto() {
                     dark:text-[#F8F3EA]
                   "
                 >
-                  Correo electrónico
-                </label>
-
-                <input
-                  id="email"
-                  type="email"
-                  placeholder="ejemplo@email.com"
-                  className="
-                    w-full
-                    rounded-2xl
-                    border
-                    border-[#D8BA98]
-                    bg-white
-                    px-5
-                    py-3
-                    text-[#52070A]
-                    outline-none
-                    transition
-                    placeholder:text-[#52070A]/35
-                    focus:border-[#D4AF37]
-                    focus:ring-2
-                    focus:ring-[#D4AF37]/20
-
-                    dark:border-[#D4AF37]/20
-                    dark:bg-[#160304]
-                    dark:text-[#F8F3EA]
-                    dark:placeholder:text-[#F8F3EA]/30
-                  "
-                />
-
-              </div>
-
-
-              {/* TELÉFONO */}
-
-              <div>
-
-                <label
-                  htmlFor="telefono"
-                  className="
-                    mb-2
-                    block
-                    text-sm
-                    font-semibold
-                    text-[#52070A]
-                    dark:text-[#F8F3EA]
-                  "
-                >
-                  Teléfono
-                </label>
-
-                <input
-                  id="telefono"
-                  type="tel"
-                  placeholder="+57 300 000 0000"
-                  className="
-                    w-full
-                    rounded-2xl
-                    border
-                    border-[#D8BA98]
-                    bg-white
-                    px-5
-                    py-3
-                    text-[#52070A]
-                    outline-none
-                    transition
-                    placeholder:text-[#52070A]/35
-                    focus:border-[#D4AF37]
-                    focus:ring-2
-                    focus:ring-[#D4AF37]/20
-
-                    dark:border-[#D4AF37]/20
-                    dark:bg-[#160304]
-                    dark:text-[#F8F3EA]
-                    dark:placeholder:text-[#F8F3EA]/30
-                  "
-                />
-
-              </div>
-
-
-              {/* MOTIVO */}
-
-              <div>
-
-                <label
-                  htmlFor="motivo"
-                  className="
-                    mb-2
-                    block
-                    text-sm
-                    font-semibold
-                    text-[#52070A]
-                    dark:text-[#F8F3EA]
-                  "
-                >
-                  Motivo de contacto
+                  Tipo de solicitud *
                 </label>
 
                 <select
-                  id="motivo"
+                  id="tipo"
+                  value={tipo}
+                  onChange={(e) => setTipo(e.target.value)}
                   className="
                     w-full
                     rounded-2xl
@@ -459,44 +407,34 @@ function Contacto() {
                     focus:border-[#D4AF37]
                     focus:ring-2
                     focus:ring-[#D4AF37]/20
-
                     dark:border-[#D4AF37]/20
                     dark:bg-[#160304]
                     dark:text-[#F8F3EA]
                   "
                 >
-
-                  <option value="">
-                    Selecciona una opción
+                  <option value="Petición">
+                    Petición
                   </option>
 
-                  <option value="producto">
-                    Información sobre un producto
+                  <option value="Queja">
+                    Queja
                   </option>
 
-                  <option value="pedido">
-                    Estado de mi pedido
+                  <option value="Reclamo">
+                    Reclamo
                   </option>
 
-                  <option value="devolucion">
-                    Cambios o devoluciones
+                  <option value="Sugerencia">
+                    Sugerencia
                   </option>
-
-                  <option value="otro">
-                    Otro
-                  </option>
-
                 </select>
-
               </div>
 
-
-              {/* MENSAJE */}
+              {/* ASUNTO */}
 
               <div>
-
                 <label
-                  htmlFor="mensaje"
+                  htmlFor="asunto"
                   className="
                     mb-2
                     block
@@ -506,13 +444,63 @@ function Contacto() {
                     dark:text-[#F8F3EA]
                   "
                 >
-                  Mensaje
+                  Asunto *
+                </label>
+
+                <input
+                  id="asunto"
+                  type="text"
+                  value={asunto}
+                  onChange={(e) => setAsunto(e.target.value)}
+                  placeholder="Escribe el asunto de tu solicitud"
+                  className="
+                    w-full
+                    rounded-2xl
+                    border
+                    border-[#D8BA98]
+                    bg-white
+                    px-5
+                    py-3
+                    text-[#52070A]
+                    outline-none
+                    transition
+                    placeholder:text-[#52070A]/35
+                    focus:border-[#D4AF37]
+                    focus:ring-2
+                    focus:ring-[#D4AF37]/20
+                    dark:border-[#D4AF37]/20
+                    dark:bg-[#160304]
+                    dark:text-[#F8F3EA]
+                    dark:placeholder:text-[#F8F3EA]/30
+                  "
+                />
+              </div>
+
+              {/* DESCRIPCIÓN */}
+
+              <div>
+                <label
+                  htmlFor="descripcion"
+                  className="
+                    mb-2
+                    block
+                    text-sm
+                    font-semibold
+                    text-[#52070A]
+                    dark:text-[#F8F3EA]
+                  "
+                >
+                  Descripción *
                 </label>
 
                 <textarea
-                  id="mensaje"
+                  id="descripcion"
                   rows="6"
-                  placeholder="Escribe tu mensaje..."
+                  value={descripcion}
+                  onChange={(e) =>
+                    setDescripcion(e.target.value)
+                  }
+                  placeholder="Cuéntanos cómo podemos ayudarte..."
                   className="
                     w-full
                     resize-none
@@ -529,21 +517,57 @@ function Contacto() {
                     focus:border-[#D4AF37]
                     focus:ring-2
                     focus:ring-[#D4AF37]/20
-
                     dark:border-[#D4AF37]/20
                     dark:bg-[#160304]
                     dark:text-[#F8F3EA]
                     dark:placeholder:text-[#F8F3EA]/30
                   "
                 />
-
               </div>
 
+              {/* ERROR */}
+
+              {error && (
+                <div
+                  className="
+                    rounded-2xl
+                    border
+                    border-red-200
+                    bg-red-50
+                    p-4
+                    text-sm
+                    font-medium
+                    text-red-700
+                  "
+                >
+                  {error}
+                </div>
+              )}
+
+              {/* MENSAJE ÉXITO */}
+
+              {mensaje && (
+                <div
+                  className="
+                    rounded-2xl
+                    border
+                    border-green-200
+                    bg-green-50
+                    p-4
+                    text-sm
+                    font-medium
+                    text-green-700
+                  "
+                >
+                  {mensaje}
+                </div>
+              )}
 
               {/* BOTÓN */}
 
               <button
                 type="submit"
+                disabled={enviando}
                 className="
                   w-full
                   rounded-full
@@ -558,15 +582,18 @@ function Contacto() {
                   hover:bg-[#D4AF37]
                   hover:text-[#52070A]
                   hover:shadow-xl
+                  disabled:cursor-not-allowed
+                  disabled:opacity-60
                 "
               >
-                Enviar mensaje →
+                {enviando
+                  ? "Enviando PQR..."
+                  : "Enviar PQR →"}
               </button>
 
             </form>
 
           </div>
-
 
           {/* ==================================================
               PANEL LATERAL
@@ -581,7 +608,6 @@ function Contacto() {
               shadow-xl
               lg:col-span-2
               md:p-10
-
               dark:border
               dark:border-[#D4AF37]/20
               dark:bg-[#260506]
@@ -623,7 +649,6 @@ function Contacto() {
               tus mensajes durante estos horarios.
             </p>
 
-
             {/* HORARIOS */}
 
             <div className="mt-10 space-y-5">
@@ -641,7 +666,6 @@ function Contacto() {
                   sm:justify-between
                 "
               >
-
                 <span className="text-white/75">
                   Lunes - Viernes
                 </span>
@@ -649,9 +673,7 @@ function Contacto() {
                 <span className="font-semibold text-[#D4AF37]">
                   8:00 AM - 6:00 PM
                 </span>
-
               </div>
-
 
               <div
                 className="
@@ -666,7 +688,6 @@ function Contacto() {
                   sm:justify-between
                 "
               >
-
                 <span className="text-white/75">
                   Sábados
                 </span>
@@ -674,9 +695,7 @@ function Contacto() {
                 <span className="font-semibold text-[#D4AF37]">
                   9:00 AM - 3:00 PM
                 </span>
-
               </div>
-
 
               <div
                 className="
@@ -691,7 +710,6 @@ function Contacto() {
                   sm:justify-between
                 "
               >
-
                 <span className="text-white/75">
                   Domingos
                 </span>
@@ -699,15 +717,11 @@ function Contacto() {
                 <span className="font-semibold text-[#D4AF37]">
                   Cerrado
                 </span>
-
               </div>
 
             </div>
 
-
-            {/* ==================================================
-                REDES
-            ================================================== */}
+            {/* REDES */}
 
             <div className="mt-12">
 
@@ -748,15 +762,12 @@ function Contacto() {
                     hover:shadow-lg
                   "
                 >
-
                   <img
                     src={instagram}
                     alt="Instagram"
                     className="h-8 w-8 object-contain"
                   />
-
                 </a>
-
 
                 {/* WHATSAPP */}
 
@@ -781,15 +792,12 @@ function Contacto() {
                     hover:shadow-lg
                   "
                 >
-
                   <img
                     src={whatsapp}
                     alt="WhatsApp"
                     className="h-8 w-8 object-contain"
                   />
-
                 </a>
-
 
                 {/* FACEBOOK */}
 
@@ -814,19 +822,16 @@ function Contacto() {
                     hover:shadow-lg
                   "
                 >
-
                   <img
                     src={facebook}
                     alt="Facebook"
                     className="h-8 w-8 object-contain"
                   />
-
                 </a>
 
               </div>
 
             </div>
-
 
             {/* FRASE */}
 
@@ -876,7 +881,6 @@ function Contacto() {
 
       </section>
 
-
       {/* ======================================================
           3. PREGUNTAS FRECUENTES
       ====================================================== */}
@@ -887,7 +891,6 @@ function Contacto() {
           px-6
           py-24
           md:px-10
-
           dark:bg-[#1D0405]
         "
       >
@@ -918,7 +921,6 @@ function Contacto() {
                 font-bold
                 text-[#7F0303]
                 md:text-5xl
-
                 dark:text-[#F8F3EA]
               "
             >
@@ -927,29 +929,39 @@ function Contacto() {
 
           </div>
 
-
           {/* FAQ */}
 
           <div className="mt-12 space-y-4">
 
             {[
               {
-                pregunta: "¿Cómo puedo saber el estado de mi pedido?",
+                pregunta:
+                  "¿Cómo puedo saber el estado de mi pedido?",
+
                 respuesta:
                   "Puedes escribirnos indicando tu número de pedido y nuestro equipo te ayudará a consultar su estado.",
               },
+
               {
-                pregunta: "¿Puedo solicitar información sobre un producto?",
+                pregunta:
+                  "¿Puedo solicitar información sobre un producto?",
+
                 respuesta:
-                  'Claro. Selecciona "Información sobre un producto" en el formulario y cuéntanos qué producto quieres consultar.',
+                  'Claro. Puedes enviar una PQR seleccionando el tipo de solicitud correspondiente y explicándonos qué producto quieres consultar.',
               },
+
               {
-                pregunta: "¿Cómo puedo comunicarme con ustedes?",
+                pregunta:
+                  "¿Cómo puedo comunicarme con ustedes?",
+
                 respuesta:
-                  "Puedes utilizar nuestro formulario, escribirnos por correo electrónico o comunicarte mediante nuestro teléfono de contacto.",
+                  "Puedes utilizar nuestro formulario de PQR o comunicarte mediante nuestros canales de contacto.",
               },
+
               {
-                pregunta: "¿Dónde están ubicados?",
+                pregunta:
+                  "¿Dónde están ubicados?",
+
                 respuesta:
                   "Nuestra tienda se encuentra en Medellín, Colombia.",
               },
@@ -966,7 +978,6 @@ function Contacto() {
                   p-6
                   transition-all
                   hover:border-[#D4AF37]
-
                   dark:border-[#D4AF37]/20
                   dark:bg-[#260506]
                 "
@@ -1005,7 +1016,6 @@ function Contacto() {
 
       </section>
 
-
       {/* ======================================================
           4. CIERRE
       ====================================================== */}
@@ -1016,7 +1026,6 @@ function Contacto() {
           px-6
           py-20
           text-center
-
           dark:bg-[#160304]
         "
       >
@@ -1059,7 +1068,6 @@ function Contacto() {
     </main>
   );
 }
-
 
 // ============================================================
 // EXPORTACIÓN
