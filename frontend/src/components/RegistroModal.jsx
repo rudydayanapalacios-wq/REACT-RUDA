@@ -417,6 +417,11 @@ export default function RegistroModal({
     (msg) => msg !== ""
   );
 
+
+  const obligatorio = (
+  <span className="ml-1 text-[#7F0303] dark:text-[#F0CC55]">*</span>
+);
+
   // =====================================================
   // MODAL
   // =====================================================
@@ -619,7 +624,7 @@ export default function RegistroModal({
                   {/* NOMBRE */}
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-[#3D1717] dark:text-[#F8F3EA]">
-                      Nombre
+                      Nombre {obligatorio}
                     </label>
 
                     <input
@@ -643,7 +648,7 @@ export default function RegistroModal({
                   {/* APELLIDO */}
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-[#3D1717] dark:text-[#F8F3EA]">
-                      Apellido
+                      Apellido {obligatorio}
                     </label>
 
                     <input
@@ -671,7 +676,7 @@ export default function RegistroModal({
                 {/* TIPO DOCUMENTO */}
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-[#3D1717] dark:text-[#F8F3EA]">
-                    Tipo de documento
+                    Tipo de documento {obligatorio}
                   </label>
 
                   <select
@@ -706,7 +711,7 @@ export default function RegistroModal({
                 {/* NUMERO DOCUMENTO */}
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-[#3D1717] dark:text-[#F8F3EA]">
-                    Número de documento
+                    Número de documento {obligatorio}
                   </label>
 
                   <input
@@ -731,7 +736,7 @@ export default function RegistroModal({
               {/* DIRECCIÓN */}
               <div>
                 <label className="mb-2 block text-sm font-semibold text-[#3D1717] dark:text-[#F8F3EA]">
-                  Dirección
+                  Dirección {obligatorio}
                 </label>
 
                 <input
@@ -770,7 +775,7 @@ export default function RegistroModal({
                   {/* CORREO */}
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-[#3D1717] dark:text-[#F8F3EA]">
-                      Correo electrónico
+                      Correo electrónico {obligatorio}
                     </label>
 
                     <input
@@ -798,7 +803,7 @@ export default function RegistroModal({
                   {/* TELEFONO */}
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-[#3D1717] dark:text-[#F8F3EA]">
-                      Teléfono
+                      Teléfono {obligatorio}
                     </label>
 
                     <input
@@ -839,7 +844,7 @@ export default function RegistroModal({
                   {/* CONTRASEÑA */}
                   <div className="relative">
                     <label className="mb-2 block text-sm font-semibold text-[#3D1717] dark:text-[#F8F3EA]">
-                      Contraseña
+                      Contraseña {obligatorio}
                     </label>
 
                     <input
@@ -914,7 +919,7 @@ export default function RegistroModal({
                   {/* CONFIRMAR CONTRASEÑA */}
                   <div className="relative">
                     <label className="mb-2 block text-sm font-semibold text-[#3D1717] dark:text-[#F8F3EA]">
-                      Confirmar contraseña
+                      Confirmar contraseña {obligatorio}
                     </label>
 
                     <input
